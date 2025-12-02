@@ -6,14 +6,29 @@ import { NotificationsController } from './notifications/notifications.controlle
 import { OrderController } from './order/order.controller';
 import { PaymentController } from './payment/payment.controller';
 import { ProductController } from './product/product.controller';
-import  {APP_FILTER, APP_INTERCEPTOR, APP_PIPE} from '@nestjs/core';
-import { HttpExceptionFilter, TimeoutInterceptor, TrimPipe, ResponseInterceptor} from '@apps/common';
-
-
+import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import {
+  HttpExceptionFilter,
+  TimeoutInterceptor,
+  TrimPipe,
+  ResponseInterceptor,
+} from '@apps/common';
+import { UsersController } from './users/users.controller';
+import { UsersAddressController } from './users-address/users-address.controller';
 
 @Module({
   imports: [],
-  controllers: [AuthController, CartController, InventoryController, NotificationsController, OrderController, PaymentController, ProductController],
+  controllers: [
+    AuthController,
+    CartController,
+    InventoryController,
+    NotificationsController,
+    OrderController,
+    PaymentController,
+    ProductController,
+    UsersController,
+    UsersAddressController,
+  ],
   providers: [
     {
       provide: APP_FILTER,
@@ -30,7 +45,7 @@ import { HttpExceptionFilter, TimeoutInterceptor, TrimPipe, ResponseInterceptor}
     {
       provide: APP_INTERCEPTOR,
       useClass: ResponseInterceptor,
-    }
+    },
   ],
 })
 export class ApiGatewayModule {}

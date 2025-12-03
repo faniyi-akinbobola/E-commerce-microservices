@@ -18,26 +18,92 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var _a;
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d, _e;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AuthController = void 0;
 const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
 const auth_service_1 = __webpack_require__(/*! ./auth.service */ "./apps/auth/src/auth.service.ts");
+const microservices_1 = __webpack_require__(/*! @nestjs/microservices */ "@nestjs/microservices");
+const common_2 = __webpack_require__(/*! @apps/common */ "./libs/common/src/index.ts");
 let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
     }
-    getHello() {
-        return this.authService.getHello();
+    login(loginDto) {
+        return this.authService.login(loginDto);
+    }
+    signup(createUserDto) {
+        return this.authService.signup(createUserDto);
+    }
+    changePassword(payload) {
+        return this.authService.changePassword(payload.userId, payload.changePasswordDto);
+    }
+    forgotPassword(forgotPasswordDto) {
+        return this.authService.forgotPassword(forgotPasswordDto.email);
+    }
+    resetPassword(resetPasswordDto) {
+        return this.authService.resetPassword(resetPasswordDto.token, resetPasswordDto.newPassword);
+    }
+    getProfile(payload) {
+        return this.authService.getProfile(payload.userId);
+    }
+    refreshTokens(payload) {
+        return this.authService.refreshTokens(payload.refreshToken);
     }
 };
 exports.AuthController = AuthController;
 __decorate([
-    (0, common_1.Get)(),
+    (0, microservices_1.MessagePattern)({ cmd: 'login' }),
+    __param(0, (0, microservices_1.Payload)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", String)
-], AuthController.prototype, "getHello", null);
+    __metadata("design:paramtypes", [typeof (_b = typeof common_2.LoginDto !== "undefined" && common_2.LoginDto) === "function" ? _b : Object]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "login", null);
+__decorate([
+    (0, microservices_1.MessagePattern)({ cmd: 'signup' }),
+    __param(0, (0, microservices_1.Payload)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_c = typeof common_2.CreateUserDto !== "undefined" && common_2.CreateUserDto) === "function" ? _c : Object]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "signup", null);
+__decorate([
+    (0, microservices_1.MessagePattern)({ cmd: 'changePassword' }),
+    __param(0, (0, microservices_1.Payload)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "changePassword", null);
+__decorate([
+    (0, microservices_1.MessagePattern)({ cmd: 'forgotPassword' }),
+    __param(0, (0, microservices_1.Payload)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_d = typeof common_2.ForgotPasswordDto !== "undefined" && common_2.ForgotPasswordDto) === "function" ? _d : Object]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "forgotPassword", null);
+__decorate([
+    (0, microservices_1.MessagePattern)({ cmd: 'resetPassword' }),
+    __param(0, (0, microservices_1.Payload)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [typeof (_e = typeof common_2.ResetPasswordDto !== "undefined" && common_2.ResetPasswordDto) === "function" ? _e : Object]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "resetPassword", null);
+__decorate([
+    (0, microservices_1.MessagePattern)({ cmd: 'getProfile' }),
+    __param(0, (0, microservices_1.Payload)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "getProfile", null);
+__decorate([
+    (0, microservices_1.MessagePattern)({ cmd: 'refreshTokens' }),
+    __param(0, (0, microservices_1.Payload)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "refreshTokens", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)(),
     __metadata("design:paramtypes", [typeof (_a = typeof auth_service_1.AuthService !== "undefined" && auth_service_1.AuthService) === "function" ? _a : Object])
@@ -67,14 +133,23 @@ const auth_service_1 = __webpack_require__(/*! ./auth.service */ "./apps/auth/sr
 const database_module_1 = __webpack_require__(/*! ./database/database.module */ "./apps/auth/src/database/database.module.ts");
 const users_module_1 = __webpack_require__(/*! ./users/users.module */ "./apps/auth/src/users/users.module.ts");
 const users_address_module_1 = __webpack_require__(/*! ./users-address/users-address.module */ "./apps/auth/src/users-address/users-address.module.ts");
+const typeorm_1 = __webpack_require__(/*! @nestjs/typeorm */ "@nestjs/typeorm");
+const user_entity_1 = __webpack_require__(/*! ./users/entities/user.entity */ "./apps/auth/src/users/entities/user.entity.ts");
+const jwt_1 = __webpack_require__(/*! @nestjs/jwt */ "@nestjs/jwt");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
 exports.AuthModule = AuthModule = __decorate([
     (0, common_1.Module)({
-        imports: [database_module_1.DatabaseModule, users_module_1.UsersModule, users_address_module_1.UsersAddressModule],
+        imports: [database_module_1.DatabaseModule, users_module_1.UsersModule, users_address_module_1.UsersAddressModule,
+            typeorm_1.TypeOrmModule.forFeature([user_entity_1.User]),
+            jwt_1.JwtModule.register({
+                secret: process.env.JWT_SECRET || 'defaultSecret',
+                signOptions: { expiresIn: '1h' },
+            })
+        ],
         controllers: [auth_controller_1.AuthController],
-        providers: [auth_service_1.AuthService],
+        providers: [auth_service_1.AuthService]
     })
 ], AuthModule);
 
@@ -94,17 +169,153 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AuthService = void 0;
 const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
+const typeorm_1 = __webpack_require__(/*! @nestjs/typeorm */ "@nestjs/typeorm");
+const user_entity_1 = __webpack_require__(/*! ./users/entities/user.entity */ "./apps/auth/src/users/entities/user.entity.ts");
+const typeorm_2 = __webpack_require__(/*! typeorm */ "typeorm");
+const bcrypt = __webpack_require__(/*! bcrypt */ "bcrypt");
+const jwt_1 = __webpack_require__(/*! @nestjs/jwt */ "@nestjs/jwt");
 let AuthService = class AuthService {
-    getHello() {
-        return 'Hello World!';
+    constructor(userRepository, jwtService) {
+        this.userRepository = userRepository;
+        this.jwtService = jwtService;
+    }
+    async login(loginDto) {
+        const user = await this.userRepository.findOne({ where: { email: loginDto.email } });
+        if (!user) {
+            throw new common_1.UnauthorizedException('Invalid credentials');
+        }
+        const isPasswordValid = await bcrypt.compare(loginDto.password, user.password);
+        if (!isPasswordValid) {
+            throw new common_1.UnauthorizedException('Invalid credentials');
+        }
+        const payload = { sub: user.id, email: user.email, role: user.role };
+        const accessToken = this.jwtService.sign(payload);
+        return {
+            accessToken,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                role: user.role,
+            },
+        };
+    }
+    async signup(createUserDto) {
+        const existingUser = await this.userRepository.findOne({
+            where: [{ email: createUserDto.email }, { username: createUserDto.username }],
+        });
+        if (existingUser) {
+            throw new common_1.ConflictException('User already exists');
+        }
+        const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+        const user = this.userRepository.create(Object.assign(Object.assign({}, createUserDto), { password: hashedPassword }));
+        await this.userRepository.save(user);
+        const payload = { sub: user.id, username: user.username, role: user.role };
+        const accessToken = this.jwtService.sign(payload);
+        return {
+            accessToken,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                role: user.role,
+            },
+        };
+    }
+    async getProfile(userId) {
+        const user = await this.userRepository.findOne({ where: { id: userId } });
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        return {
+            id: user.id,
+            username: user.username,
+            email: user.email,
+            role: user.role,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+        };
+    }
+    async refreshTokens(refreshToken) {
+        let payload;
+        try {
+            payload = this.jwtService.verify(refreshToken, { secret: process.env.REFRESH_SECRET });
+        }
+        catch (err) {
+            throw new common_1.UnauthorizedException('Invalid or expired refresh token');
+        }
+        const user = await this.userRepository.findOne({ where: { id: payload.sub } });
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        const accessToken = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { secret: process.env.JWT_SECRET, expiresIn: '15m' });
+        const newRefreshToken = this.jwtService.sign({ sub: user.id, email: user.email }, { secret: process.env.REFRESH_SECRET, expiresIn: '7d' });
+        return {
+            accessToken,
+            refreshToken: newRefreshToken,
+            user: {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                role: user.role,
+            },
+        };
+    }
+    async changePassword(userId, dto) {
+        const user = await this.userRepository.findOne({ where: { id: userId } });
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        const valid = await bcrypt.compare(dto.oldPassword, user.password);
+        if (!valid) {
+            throw new common_1.UnauthorizedException('Old password is incorrect');
+        }
+        const newHash = await bcrypt.hash(dto.newPassword, 10);
+        user.password = newHash;
+        await this.userRepository.save(user);
+        return { message: 'Password updated successfully' };
+    }
+    async forgotPassword(email) {
+        const user = await this.userRepository.findOne({ where: { email } });
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        const token = this.jwtService.sign({ sub: user.id }, { secret: process.env.RESET_SECRET, expiresIn: '10m' });
+        return { message: 'Reset email sent', token };
+    }
+    async resetPassword(token, newPassword) {
+        let payload;
+        try {
+            payload = this.jwtService.verify(token, { secret: process.env.RESET_SECRET });
+        }
+        catch (err) {
+            throw new common_1.UnauthorizedException('Invalid or expired reset token');
+        }
+        const user = await this.userRepository.findOne({ where: { id: payload.sub } });
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        const newHash = await bcrypt.hash(newPassword, 10);
+        user.password = newHash;
+        await this.userRepository.save(user);
+        return { message: 'Password reset successfully' };
     }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
-    (0, common_1.Injectable)()
+    (0, common_1.Injectable)(),
+    __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
+    __metadata("design:paramtypes", [typeof (_a = typeof typeorm_2.Repository !== "undefined" && typeorm_2.Repository) === "function" ? _a : Object, typeof (_b = typeof jwt_1.JwtService !== "undefined" && jwt_1.JwtService) === "function" ? _b : Object])
 ], AuthService);
 
 
@@ -164,6 +375,86 @@ exports.DatabaseModule = DatabaseModule = __decorate([
         exports: [typeorm_1.TypeOrmModule],
     })
 ], DatabaseModule);
+
+
+/***/ }),
+
+/***/ "./apps/auth/src/users-address/entities/user-address.entity.ts":
+/*!*********************************************************************!*\
+  !*** ./apps/auth/src/users-address/entities/user-address.entity.ts ***!
+  \*********************************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UserAddress = void 0;
+const typeorm_1 = __webpack_require__(/*! typeorm */ "typeorm");
+const user_entity_1 = __webpack_require__(/*! ../../users/entities/user.entity */ "./apps/auth/src/users/entities/user.entity.ts");
+let UserAddress = class UserAddress {
+};
+exports.UserAddress = UserAddress;
+__decorate([
+    (0, typeorm_1.PrimaryGeneratedColumn)('uuid'),
+    __metadata("design:type", String)
+], UserAddress.prototype, "id", void 0);
+__decorate([
+    (0, typeorm_1.ManyToOne)(() => user_entity_1.User, (user) => user.addresses, { onDelete: 'CASCADE' }),
+    (0, typeorm_1.JoinColumn)({ name: 'user_id' }),
+    __metadata("design:type", typeof (_a = typeof user_entity_1.User !== "undefined" && user_entity_1.User) === "function" ? _a : Object)
+], UserAddress.prototype, "user", void 0);
+__decorate([
+    (0, typeorm_1.Column)(),
+    __metadata("design:type", String)
+], UserAddress.prototype, "fullName", void 0);
+__decorate([
+    (0, typeorm_1.Column)(),
+    __metadata("design:type", String)
+], UserAddress.prototype, "phone", void 0);
+__decorate([
+    (0, typeorm_1.Column)(),
+    __metadata("design:type", String)
+], UserAddress.prototype, "street", void 0);
+__decorate([
+    (0, typeorm_1.Column)(),
+    __metadata("design:type", String)
+], UserAddress.prototype, "city", void 0);
+__decorate([
+    (0, typeorm_1.Column)(),
+    __metadata("design:type", String)
+], UserAddress.prototype, "state", void 0);
+__decorate([
+    (0, typeorm_1.Column)(),
+    __metadata("design:type", String)
+], UserAddress.prototype, "country", void 0);
+__decorate([
+    (0, typeorm_1.Column)(),
+    __metadata("design:type", String)
+], UserAddress.prototype, "postalCode", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], UserAddress.prototype, "isDefault", void 0);
+__decorate([
+    (0, typeorm_1.CreateDateColumn)(),
+    __metadata("design:type", typeof (_b = typeof Date !== "undefined" && Date) === "function" ? _b : Object)
+], UserAddress.prototype, "createdAt", void 0);
+__decorate([
+    (0, typeorm_1.UpdateDateColumn)(),
+    __metadata("design:type", typeof (_c = typeof Date !== "undefined" && Date) === "function" ? _c : Object)
+], UserAddress.prototype, "updatedAt", void 0);
+exports.UserAddress = UserAddress = __decorate([
+    (0, typeorm_1.Entity)('user_addresses')
+], UserAddress);
 
 
 /***/ }),
@@ -251,6 +542,74 @@ exports.UsersAddressService = UsersAddressService = __decorate([
 
 /***/ }),
 
+/***/ "./apps/auth/src/users/entities/user.entity.ts":
+/*!*****************************************************!*\
+  !*** ./apps/auth/src/users/entities/user.entity.ts ***!
+  \*****************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.User = void 0;
+const roles_decorator_1 = __webpack_require__(/*! common/decorators/roles.decorator */ "./libs/common/src/decorators/roles.decorator.ts");
+const typeorm_1 = __webpack_require__(/*! typeorm */ "typeorm");
+const user_address_entity_1 = __webpack_require__(/*! ../../users-address/entities/user-address.entity */ "./apps/auth/src/users-address/entities/user-address.entity.ts");
+let User = class User {
+};
+exports.User = User;
+__decorate([
+    (0, typeorm_1.PrimaryGeneratedColumn)('uuid'),
+    __metadata("design:type", String)
+], User.prototype, "id", void 0);
+__decorate([
+    (0, typeorm_1.Column)(),
+    __metadata("design:type", String)
+], User.prototype, "username", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ unique: true }),
+    __metadata("design:type", String)
+], User.prototype, "email", void 0);
+__decorate([
+    (0, typeorm_1.Column)(),
+    __metadata("design:type", String)
+], User.prototype, "password", void 0);
+__decorate([
+    (0, typeorm_1.Column)({
+        type: 'enum',
+        enum: ['ADMIN', 'CUSTOMER', 'INVENTORY_MANAGER'],
+        default: 'CUSTOMER',
+    }),
+    __metadata("design:type", typeof (_a = typeof roles_decorator_1.Role !== "undefined" && roles_decorator_1.Role) === "function" ? _a : Object)
+], User.prototype, "role", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => user_address_entity_1.UserAddress, (address) => address.user),
+    __metadata("design:type", Array)
+], User.prototype, "addresses", void 0);
+__decorate([
+    (0, typeorm_1.CreateDateColumn)(),
+    __metadata("design:type", typeof (_b = typeof Date !== "undefined" && Date) === "function" ? _b : Object)
+], User.prototype, "createdAt", void 0);
+__decorate([
+    (0, typeorm_1.UpdateDateColumn)(),
+    __metadata("design:type", typeof (_c = typeof Date !== "undefined" && Date) === "function" ? _c : Object)
+], User.prototype, "updatedAt", void 0);
+exports.User = User = __decorate([
+    (0, typeorm_1.Entity)()
+], User);
+
+
+/***/ }),
+
 /***/ "./apps/auth/src/users/users.controller.ts":
 /*!*************************************************!*\
   !*** ./apps/auth/src/users/users.controller.ts ***!
@@ -267,50 +626,65 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UsersController = void 0;
 const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
+const users_service_1 = __webpack_require__(/*! ./users.service */ "./apps/auth/src/users/users.service.ts");
+const dtos_1 = __webpack_require__(/*! common/dtos */ "./libs/common/src/dtos/index.ts");
+const microservices_1 = __webpack_require__(/*! @nestjs/microservices */ "@nestjs/microservices");
 let UsersController = class UsersController {
-    createUser() {
-        return 'User created';
+    constructor(usersService) {
+        this.usersService = usersService;
+    }
+    createUser(createUserDto) {
+        return this.usersService.createUser(createUserDto);
     }
     getUsers() {
-        return 'List of users';
+        return this.usersService.getUsers();
     }
-    updateUser() {
-        return 'User updated';
+    updateUser(id, updateUserDto) {
+        return this.usersService.updateUser(id, updateUserDto);
     }
-    deleteUser() {
-        return 'User deleted';
+    deleteUser(id) {
+        return this.usersService.deleteUser(id);
     }
 };
 exports.UsersController = UsersController;
 __decorate([
     (0, common_1.Post)(),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [typeof (_b = typeof dtos_1.CreateUserDto !== "undefined" && dtos_1.CreateUserDto) === "function" ? _b : Object]),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "createUser", null);
 __decorate([
-    (0, common_1.Get)(),
+    (0, microservices_1.MessagePattern)({ cmd: 'get_users' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "getUsers", null);
 __decorate([
-    (0, common_1.Patch)(),
+    (0, microservices_1.MessagePattern)({ cmd: 'update_user' }),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [String, typeof (_c = typeof dtos_1.UpdateUserDto !== "undefined" && dtos_1.UpdateUserDto) === "function" ? _c : Object]),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "updateUser", null);
 __decorate([
-    (0, common_1.Delete)(),
+    (0, microservices_1.MessagePattern)({ cmd: 'delete_user' }),
+    __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "deleteUser", null);
 exports.UsersController = UsersController = __decorate([
-    (0, common_1.Controller)('users')
+    (0, common_1.Controller)('users'),
+    __metadata("design:paramtypes", [typeof (_a = typeof users_service_1.UsersService !== "undefined" && users_service_1.UsersService) === "function" ? _a : Object])
 ], UsersController);
 
 
@@ -334,11 +708,15 @@ exports.UsersModule = void 0;
 const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
 const users_controller_1 = __webpack_require__(/*! ./users.controller */ "./apps/auth/src/users/users.controller.ts");
 const users_service_1 = __webpack_require__(/*! ./users.service */ "./apps/auth/src/users/users.service.ts");
+const database_module_1 = __webpack_require__(/*! ../database/database.module */ "./apps/auth/src/database/database.module.ts");
+const typeorm_1 = __webpack_require__(/*! @nestjs/typeorm */ "@nestjs/typeorm");
+const user_entity_1 = __webpack_require__(/*! ./entities/user.entity */ "./apps/auth/src/users/entities/user.entity.ts");
 let UsersModule = class UsersModule {
 };
 exports.UsersModule = UsersModule;
 exports.UsersModule = UsersModule = __decorate([
     (0, common_1.Module)({
+        imports: [database_module_1.DatabaseModule, typeorm_1.TypeOrmModule.forFeature([user_entity_1.User])],
         controllers: [users_controller_1.UsersController],
         providers: [users_service_1.UsersService]
     })
@@ -360,14 +738,63 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UsersService = void 0;
 const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
+const user_entity_1 = __webpack_require__(/*! ./entities/user.entity */ "./apps/auth/src/users/entities/user.entity.ts");
+const typeorm_1 = __webpack_require__(/*! typeorm */ "typeorm");
+const typeorm_2 = __webpack_require__(/*! @nestjs/typeorm */ "@nestjs/typeorm");
 let UsersService = class UsersService {
+    constructor(userRepository) {
+        this.userRepository = userRepository;
+    }
+    async findById(userId) {
+        throw new Error('Method not implemented.');
+    }
+    async findByEmail(email) {
+        throw new Error('Method not implemented.');
+    }
+    async updatePassword(userId, newHash) {
+        throw new Error('Method not implemented.');
+    }
+    async createUser(createUserDto) {
+        const user = this.userRepository.create(createUserDto);
+        return this.userRepository.save(user);
+    }
+    async deleteUser(id) {
+        const user = await this.userRepository.findOne({ where: { id } });
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        return this.userRepository.remove(user);
+    }
+    async updateUser(id, updateUserDto) {
+        const user = await this.userRepository.preload(Object.assign({ id: id }, updateUserDto));
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        return this.userRepository.save(user);
+    }
+    async getUsers() {
+        const users = await this.userRepository.find();
+        if (!users) {
+            throw new common_1.NotFoundException('No users found');
+        }
+        return users;
+    }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([
-    (0, common_1.Injectable)()
+    (0, common_1.Injectable)(),
+    __param(0, (0, typeorm_2.InjectRepository)(user_entity_1.User)),
+    __metadata("design:paramtypes", [typeof (_a = typeof typeorm_1.Repository !== "undefined" && typeorm_1.Repository) === "function" ? _a : Object])
 ], UsersService);
 
 
@@ -538,6 +965,40 @@ exports.Roles = Roles;
 
 /***/ }),
 
+/***/ "./libs/common/src/dtos/change-password.dto.ts":
+/*!*****************************************************!*\
+  !*** ./libs/common/src/dtos/change-password.dto.ts ***!
+  \*****************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ChangePasswordDto = void 0;
+const class_validator_1 = __webpack_require__(/*! class-validator */ "class-validator");
+class ChangePasswordDto {
+}
+exports.ChangePasswordDto = ChangePasswordDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ChangePasswordDto.prototype, "oldPassword", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ChangePasswordDto.prototype, "newPassword", void 0);
+
+
+/***/ }),
+
 /***/ "./libs/common/src/dtos/create-address.dto.ts":
 /*!****************************************************!*\
   !*** ./libs/common/src/dtos/create-address.dto.ts ***!
@@ -614,8 +1075,14 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CreateUserDto = void 0;
+exports.CreateUserDto = exports.UserRole = void 0;
 const class_validator_1 = __webpack_require__(/*! class-validator */ "class-validator");
+var UserRole;
+(function (UserRole) {
+    UserRole["ADMIN"] = "ADMIN";
+    UserRole["CUSTOMER"] = "CUSTOMER";
+    UserRole["INVENTORY_MANAGER"] = "INVENTORY_MANAGER";
+})(UserRole || (exports.UserRole = UserRole = {}));
 class CreateUserDto {
 }
 exports.CreateUserDto = CreateUserDto;
@@ -630,9 +1097,51 @@ __decorate([
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "email", void 0);
 __decorate([
-    (0, class_validator_1.IsStrongPassword)(),
+    (0, class_validator_1.IsStrongPassword)({
+        minLength: 8,
+        minLowercase: 1,
+        minUppercase: 1,
+        minNumbers: 1,
+        minSymbols: 1,
+    }),
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "password", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsEnum)(UserRole),
+    __metadata("design:type", String)
+], CreateUserDto.prototype, "role", void 0);
+
+
+/***/ }),
+
+/***/ "./libs/common/src/dtos/forgot-password.dto.ts":
+/*!*****************************************************!*\
+  !*** ./libs/common/src/dtos/forgot-password.dto.ts ***!
+  \*****************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ForgotPasswordDto = void 0;
+const class_validator_1 = __webpack_require__(/*! class-validator */ "class-validator");
+class ForgotPasswordDto {
+}
+exports.ForgotPasswordDto = ForgotPasswordDto;
+__decorate([
+    (0, class_validator_1.IsEmail)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], ForgotPasswordDto.prototype, "email", void 0);
 
 
 /***/ }),
@@ -663,6 +1172,111 @@ __exportStar(__webpack_require__(/*! ./create-user.dto */ "./libs/common/src/dto
 __exportStar(__webpack_require__(/*! ./update-user.dto */ "./libs/common/src/dtos/update-user.dto.ts"), exports);
 __exportStar(__webpack_require__(/*! ./create-address.dto */ "./libs/common/src/dtos/create-address.dto.ts"), exports);
 __exportStar(__webpack_require__(/*! ./update-address.dto */ "./libs/common/src/dtos/update-address.dto.ts"), exports);
+__exportStar(__webpack_require__(/*! ./refresh-token.dto */ "./libs/common/src/dtos/refresh-token.dto.ts"), exports);
+__exportStar(__webpack_require__(/*! ./forgot-password.dto */ "./libs/common/src/dtos/forgot-password.dto.ts"), exports);
+__exportStar(__webpack_require__(/*! ./reset-password.dto */ "./libs/common/src/dtos/reset-password.dto.ts"), exports);
+__exportStar(__webpack_require__(/*! ./change-password.dto */ "./libs/common/src/dtos/change-password.dto.ts"), exports);
+__exportStar(__webpack_require__(/*! ./login.dto */ "./libs/common/src/dtos/login.dto.ts"), exports);
+
+
+/***/ }),
+
+/***/ "./libs/common/src/dtos/login.dto.ts":
+/*!*******************************************!*\
+  !*** ./libs/common/src/dtos/login.dto.ts ***!
+  \*******************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LoginDto = void 0;
+const class_validator_1 = __webpack_require__(/*! class-validator */ "class-validator");
+class LoginDto {
+}
+exports.LoginDto = LoginDto;
+__decorate([
+    (0, class_validator_1.IsEmail)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], LoginDto.prototype, "email", void 0);
+__decorate([
+    (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.IsStrongPassword)(),
+    __metadata("design:type", String)
+], LoginDto.prototype, "password", void 0);
+
+
+/***/ }),
+
+/***/ "./libs/common/src/dtos/refresh-token.dto.ts":
+/*!***************************************************!*\
+  !*** ./libs/common/src/dtos/refresh-token.dto.ts ***!
+  \***************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RefreshTokenDto = void 0;
+const class_validator_1 = __webpack_require__(/*! class-validator */ "class-validator");
+class RefreshTokenDto {
+}
+exports.RefreshTokenDto = RefreshTokenDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], RefreshTokenDto.prototype, "refreshToken", void 0);
+
+
+/***/ }),
+
+/***/ "./libs/common/src/dtos/reset-password.dto.ts":
+/*!****************************************************!*\
+  !*** ./libs/common/src/dtos/reset-password.dto.ts ***!
+  \****************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ResetPasswordDto = void 0;
+const class_validator_1 = __webpack_require__(/*! class-validator */ "class-validator");
+class ResetPasswordDto {
+}
+exports.ResetPasswordDto = ResetPasswordDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ResetPasswordDto.prototype, "token", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ResetPasswordDto.prototype, "newPassword", void 0);
 
 
 /***/ }),
@@ -848,6 +1462,34 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 __exportStar(__webpack_require__(/*! ./roles.guard */ "./libs/common/src/guards/roles.guard.ts"), exports);
+__exportStar(__webpack_require__(/*! ./jwt-auth.guard */ "./libs/common/src/guards/jwt-auth.guard.ts"), exports);
+
+
+/***/ }),
+
+/***/ "./libs/common/src/guards/jwt-auth.guard.ts":
+/*!**************************************************!*\
+  !*** ./libs/common/src/guards/jwt-auth.guard.ts ***!
+  \**************************************************/
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.JwtAuthGuard = void 0;
+const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
+const passport_1 = __webpack_require__(/*! @nestjs/passport */ "@nestjs/passport");
+let JwtAuthGuard = class JwtAuthGuard extends (0, passport_1.AuthGuard)('jwt') {
+};
+exports.JwtAuthGuard = JwtAuthGuard;
+exports.JwtAuthGuard = JwtAuthGuard = __decorate([
+    (0, common_1.Injectable)()
+], JwtAuthGuard);
 
 
 /***/ }),
@@ -879,14 +1521,12 @@ let RolesGuard = class RolesGuard {
         this.reflector = reflector;
     }
     canActivate(context) {
-        const requiredRoles = this.reflector.getAllAndOverride(roles_decorator_1.ROLES_KEY, [
-            context.getHandler(),
-            context.getClass(),
-        ]);
-        if (!requiredRoles)
+        const requiredRoles = this.reflector.getAllAndOverride(roles_decorator_1.ROLES_KEY, [context.getHandler(), context.getClass()]);
+        if (!requiredRoles || requiredRoles.length === 0)
             return true;
-        const { user } = context.switchToHttp().getRequest();
-        if (!user || !user.role)
+        const req = context.switchToHttp().getRequest();
+        const user = req.user;
+        if (!user)
             return false;
         return requiredRoles.includes(user.role);
     }
@@ -1202,6 +1842,16 @@ module.exports = require("@nestjs/core");
 
 /***/ }),
 
+/***/ "@nestjs/jwt":
+/*!******************************!*\
+  !*** external "@nestjs/jwt" ***!
+  \******************************/
+/***/ ((module) => {
+
+module.exports = require("@nestjs/jwt");
+
+/***/ }),
+
 /***/ "@nestjs/mapped-types":
 /*!***************************************!*\
   !*** external "@nestjs/mapped-types" ***!
@@ -1222,6 +1872,16 @@ module.exports = require("@nestjs/microservices");
 
 /***/ }),
 
+/***/ "@nestjs/passport":
+/*!***********************************!*\
+  !*** external "@nestjs/passport" ***!
+  \***********************************/
+/***/ ((module) => {
+
+module.exports = require("@nestjs/passport");
+
+/***/ }),
+
 /***/ "@nestjs/typeorm":
 /*!**********************************!*\
   !*** external "@nestjs/typeorm" ***!
@@ -1229,6 +1889,16 @@ module.exports = require("@nestjs/microservices");
 /***/ ((module) => {
 
 module.exports = require("@nestjs/typeorm");
+
+/***/ }),
+
+/***/ "bcrypt":
+/*!*************************!*\
+  !*** external "bcrypt" ***!
+  \*************************/
+/***/ ((module) => {
+
+module.exports = require("bcrypt");
 
 /***/ }),
 
@@ -1269,6 +1939,16 @@ module.exports = require("rxjs");
 /***/ ((module) => {
 
 module.exports = require("rxjs/operators");
+
+/***/ }),
+
+/***/ "typeorm":
+/*!**************************!*\
+  !*** external "typeorm" ***!
+  \**************************/
+/***/ ((module) => {
+
+module.exports = require("typeorm");
 
 /***/ }),
 

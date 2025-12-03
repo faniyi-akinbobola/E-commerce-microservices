@@ -41,3 +41,9 @@ export const ADDRESS_EVENTS = {
   UPDATED: 'address_updated',
   DELETED: 'address_deleted',
 };
+
+// export const USER_EVENTS = {
+//   CREATED: 'user_created',
+//   UPDATED: 'user_updated',
+//   DELETED: 'user_deleted',
+// };

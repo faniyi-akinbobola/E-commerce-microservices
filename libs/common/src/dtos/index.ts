@@ -2,3 +2,8 @@ export * from './create-user.dto';
 export * from './update-user.dto';
 export * from './create-address.dto';
 export * from './update-address.dto';
+export * from './refresh-token.dto';
+export * from './forgot-password.dto';
+export * from './reset-password.dto';
+export * from './change-password.dto';
+export * from './login.dto';

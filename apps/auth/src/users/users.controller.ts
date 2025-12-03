@@ -1,25 +1,30 @@
-import { Controller, Delete, Post, Get, Patch } from '@nestjs/common';
+import { Controller, Delete, Post, Get, Patch, Body, Param, Query } from '@nestjs/common';
+import { UsersService } from './users.service';
+import { CreateUserDto, UpdateUserDto } from 'common/dtos';
+import { MessagePattern } from '@nestjs/microservices';
 
 @Controller('users')
 export class UsersController {
 
+    constructor(private readonly usersService: UsersService) {}
+
     @Post()
-    createUser() {
-        return 'User created';
+    createUser(@Body() createUserDto : CreateUserDto) {
+        return this.usersService.createUser(createUserDto);
     }
 
-    @Get()
+    @MessagePattern({ cmd: 'get_users' })
     getUsers() {
-        return 'List of users';
+        return this.usersService.getUsers();
     }
 
-    @Patch()
-    updateUser() {
-        return 'User updated';
+    @MessagePattern({ cmd: 'update_user' })
+    updateUser(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+        return this.usersService.updateUser(id, updateUserDto);
     }
 
-    @Delete()
-    deleteUser() {
-        return 'User deleted';
+    @MessagePattern({ cmd: 'delete_user' })
+    deleteUser(@Param('id') id: string) {
+        return this.usersService.deleteUser(id);
     }
 }

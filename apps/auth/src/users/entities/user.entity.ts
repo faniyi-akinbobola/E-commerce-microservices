@@ -17,6 +17,13 @@ export class User {
     @Column()
     password: string;
 
+       // For password reset
+    @Column({ nullable: true })
+    resetToken: string;
+
+    @Column({ nullable: true, type: 'timestamp' })
+    resetTokenExpires: Date;
+
     @Column({
   type: 'enum',
   enum: ['ADMIN', 'CUSTOMER', 'INVENTORY_MANAGER'],

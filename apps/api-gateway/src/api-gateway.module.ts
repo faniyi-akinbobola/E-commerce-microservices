@@ -12,12 +12,117 @@ import {
   TimeoutInterceptor,
   TrimPipe,
   ResponseInterceptor,
+  QUEUES
 } from '@apps/common';
 import { UsersController } from './users/users.controller';
 import { UsersAddressController } from './users-address/users-address.controller';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { ShippingController } from './shipping/shipping.controller';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 
 @Module({
-  imports: [],
+  imports: [
+ClientsModule.registerAsync([
+      {
+        name: 'PRODUCT_SERVICE',
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: (config: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [config.get<string>('RABBITMQ_URL') as string],
+            queue: config.get<string>('PRODUCT_QUEUE') as string,  
+            queueOptions: { durable: true },
+          },
+        }),
+      },
+
+      {
+        name: 'AUTH_SERVICE',
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: (config: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [config.get<string>('RABBITMQ_URL') as string],
+            queue: config.get<string>('AUTH_QUEUE') as string, 
+            queueOptions: { durable: true },
+          },
+        }),
+      },
+
+      {
+        name:'CART_SERVICE',
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: (config: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [config.get<string>('RABBITMQ_URL') as string],
+            queue: config.get<string>(QUEUES.CART_QUEUE) as string, 
+            queueOptions: { durable: true },
+          },
+        }),
+      },
+
+      {
+        name:'INVENTORY_SERVICE',
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: (config: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [config.get<string>('RABBITMQ_URL') as string],
+            queue: config.get<string>(QUEUES.INVENTORY_QUEUE) as string, 
+            queueOptions: { durable: true },
+          },
+        }),
+      },
+
+      {
+        name:'ORDER_SERVICE',
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: (config: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [config.get<string>('RABBITMQ_URL') as string],
+            queue: config.get<string>(QUEUES.ORDER_QUEUE) as string, 
+            queueOptions: { durable: true },
+          },
+        }),
+      },
+
+      {
+        name:'PAYMENT_SERVICE',
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: (config: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [config.get<string>('RABBITMQ_URL') as string],
+            queue: config.get<string>(QUEUES.PAYMENT_QUEUE) as string, 
+            queueOptions: { durable: true },
+          },
+        }),
+      },
+
+      {
+        name:'SHIPPING_SERVICE',
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: (config: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [config.get<string>('RABBITMQ_URL') as string],
+            queue: config.get<string>(QUEUES.SHIPPING_QUEUE) as string, 
+            queueOptions: { durable: true },
+          },
+        }),
+      }
+
+    ]),
+  ],
   controllers: [
     AuthController,
     CartController,
@@ -28,6 +133,7 @@ import { UsersAddressController } from './users-address/users-address.controller
     ProductController,
     UsersController,
     UsersAddressController,
+    ShippingController,
   ],
   providers: [
     {

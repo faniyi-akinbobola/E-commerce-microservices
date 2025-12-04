@@ -1,7 +1,7 @@
 import { Controller, Get, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { LoginDto, ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto, CreateAddressDto, CreateUserDto } from '@apps/common';
+import { LoginDto, ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto, RefreshTokenDto, CreateUserDto } from '@apps/common';
 
 @Controller()
 export class AuthController {
@@ -29,7 +29,7 @@ export class AuthController {
 
   @MessagePattern({ cmd: 'resetPassword' })
   resetPassword(@Payload() resetPasswordDto: ResetPasswordDto) {
-    return this.authService.resetPassword(resetPasswordDto.token, resetPasswordDto.newPassword);
+    return this.authService.resetPassword(resetPasswordDto.userId, resetPasswordDto.token, resetPasswordDto.newPassword);
   }
 
   @MessagePattern({ cmd: 'getProfile' })
@@ -38,7 +38,7 @@ export class AuthController {
   }
 
   @MessagePattern({ cmd: 'refreshTokens' })
-  refreshTokens(@Payload() payload: { refreshToken: string }) {
+  refreshTokens(@Payload() payload: RefreshTokenDto) {
     return this.authService.refreshTokens(payload.refreshToken);
   }
 

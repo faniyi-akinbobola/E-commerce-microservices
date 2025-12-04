@@ -21,7 +21,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b, _c, _d, _e;
+var _a, _b, _c, _d, _e, _f;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AuthController = void 0;
 const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
@@ -45,7 +45,7 @@ let AuthController = class AuthController {
         return this.authService.forgotPassword(forgotPasswordDto.email);
     }
     resetPassword(resetPasswordDto) {
-        return this.authService.resetPassword(resetPasswordDto.token, resetPasswordDto.newPassword);
+        return this.authService.resetPassword(resetPasswordDto.userId, resetPasswordDto.token, resetPasswordDto.newPassword);
     }
     getProfile(payload) {
         return this.authService.getProfile(payload.userId);
@@ -101,7 +101,7 @@ __decorate([
     (0, microservices_1.MessagePattern)({ cmd: 'refreshTokens' }),
     __param(0, (0, microservices_1.Payload)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [typeof (_f = typeof common_2.RefreshTokenDto !== "undefined" && common_2.RefreshTokenDto) === "function" ? _f : Object]),
     __metadata("design:returntype", void 0)
 ], AuthController.prototype, "refreshTokens", null);
 exports.AuthController = AuthController = __decorate([
@@ -136,6 +136,9 @@ const users_address_module_1 = __webpack_require__(/*! ./users-address/users-add
 const typeorm_1 = __webpack_require__(/*! @nestjs/typeorm */ "@nestjs/typeorm");
 const user_entity_1 = __webpack_require__(/*! ./users/entities/user.entity */ "./apps/auth/src/users/entities/user.entity.ts");
 const jwt_1 = __webpack_require__(/*! @nestjs/jwt */ "@nestjs/jwt");
+const microservices_1 = __webpack_require__(/*! @nestjs/microservices */ "@nestjs/microservices");
+const config_1 = __webpack_require__(/*! @nestjs/config */ "@nestjs/config");
+const common_2 = __webpack_require__(/*! @apps/common */ "./libs/common/src/index.ts");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
@@ -146,7 +149,22 @@ exports.AuthModule = AuthModule = __decorate([
             jwt_1.JwtModule.register({
                 secret: process.env.JWT_SECRET || 'defaultSecret',
                 signOptions: { expiresIn: '1h' },
-            })
+            }),
+            microservices_1.ClientsModule.registerAsync([
+                {
+                    name: 'NOTIFICATION_SERVICE',
+                    useFactory: (config) => ({
+                        transport: microservices_1.Transport.RMQ,
+                        options: {
+                            urls: [config.get('RABBITMQ_URL')],
+                            queue: config.get(common_2.QUEUES.NOTIFICATIONS_QUEUE),
+                            queueOptions: { durable: true },
+                        },
+                    }),
+                    inject: [config_1.ConfigService],
+                    imports: [config_1.ConfigModule],
+                },
+            ])
         ],
         controllers: [auth_controller_1.AuthController],
         providers: [auth_service_1.AuthService]
@@ -175,7 +193,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b;
+var _a, _b, _c, _d, _e;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AuthService = void 0;
 const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
@@ -183,11 +201,19 @@ const typeorm_1 = __webpack_require__(/*! @nestjs/typeorm */ "@nestjs/typeorm");
 const user_entity_1 = __webpack_require__(/*! ./users/entities/user.entity */ "./apps/auth/src/users/entities/user.entity.ts");
 const typeorm_2 = __webpack_require__(/*! typeorm */ "typeorm");
 const bcrypt = __webpack_require__(/*! bcrypt */ "bcrypt");
+const users_service_1 = __webpack_require__(/*! ./users/users.service */ "./apps/auth/src/users/users.service.ts");
 const jwt_1 = __webpack_require__(/*! @nestjs/jwt */ "@nestjs/jwt");
+const common_2 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
+const microservices_1 = __webpack_require__(/*! @nestjs/microservices */ "@nestjs/microservices");
+const crypto_1 = __webpack_require__(/*! crypto */ "crypto");
+const config_1 = __webpack_require__(/*! @nestjs/config */ "@nestjs/config");
 let AuthService = class AuthService {
-    constructor(userRepository, jwtService) {
+    constructor(userRepository, jwtService, notificationClient, configService, usersService) {
         this.userRepository = userRepository;
         this.jwtService = jwtService;
+        this.notificationClient = notificationClient;
+        this.configService = configService;
+        this.usersService = usersService;
     }
     async login(loginDto) {
         const user = await this.userRepository.findOne({ where: { email: loginDto.email } });
@@ -200,6 +226,7 @@ let AuthService = class AuthService {
         }
         const payload = { sub: user.id, email: user.email, role: user.role };
         const accessToken = this.jwtService.sign(payload);
+        this.notificationClient.emit('user_logged_in', { userId: user.id, name: user.username, email: user.email });
         return {
             accessToken,
             user: {
@@ -211,15 +238,8 @@ let AuthService = class AuthService {
         };
     }
     async signup(createUserDto) {
-        const existingUser = await this.userRepository.findOne({
-            where: [{ email: createUserDto.email }, { username: createUserDto.username }],
-        });
-        if (existingUser) {
-            throw new common_1.ConflictException('User already exists');
-        }
-        const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-        const user = this.userRepository.create(Object.assign(Object.assign({}, createUserDto), { password: hashedPassword }));
-        await this.userRepository.save(user);
+        const user = await this.usersService.createUser(createUserDto);
+        this.notificationClient.emit('user_created', { userId: user.id, name: user.username, email: user.email });
         const payload = { sub: user.id, username: user.username, role: user.role };
         const accessToken = this.jwtService.sign(payload);
         return {
@@ -249,17 +269,16 @@ let AuthService = class AuthService {
     async refreshTokens(refreshToken) {
         let payload;
         try {
-            payload = this.jwtService.verify(refreshToken, { secret: process.env.REFRESH_SECRET });
+            payload = this.jwtService.verify(refreshToken, { secret: this.configService.get('REFRESH_SECRET') });
         }
         catch (err) {
             throw new common_1.UnauthorizedException('Invalid or expired refresh token');
         }
         const user = await this.userRepository.findOne({ where: { id: payload.sub } });
-        if (!user) {
+        if (!user)
             throw new common_1.NotFoundException('User not found');
-        }
-        const accessToken = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { secret: process.env.JWT_SECRET, expiresIn: '15m' });
-        const newRefreshToken = this.jwtService.sign({ sub: user.id, email: user.email }, { secret: process.env.REFRESH_SECRET, expiresIn: '7d' });
+        const accessToken = this.jwtService.sign({ sub: user.id, email: user.email, role: user.role }, { secret: this.configService.get('JWT_SECRET'), expiresIn: '15m' });
+        const newRefreshToken = this.jwtService.sign({ sub: user.id, email: user.email }, { secret: this.configService.get('REFRESH_SECRET'), expiresIn: '7d' });
         return {
             accessToken,
             refreshToken: newRefreshToken,
@@ -272,50 +291,67 @@ let AuthService = class AuthService {
         };
     }
     async changePassword(userId, dto) {
+        const { oldPassword, newPassword } = dto;
         const user = await this.userRepository.findOne({ where: { id: userId } });
-        if (!user) {
+        if (!user)
             throw new common_1.NotFoundException('User not found');
-        }
-        const valid = await bcrypt.compare(dto.oldPassword, user.password);
-        if (!valid) {
+        const valid = await bcrypt.compare(oldPassword, user.password);
+        if (!valid)
             throw new common_1.UnauthorizedException('Old password is incorrect');
-        }
-        const newHash = await bcrypt.hash(dto.newPassword, 10);
-        user.password = newHash;
+        user.password = await bcrypt.hash(newPassword, 10);
         await this.userRepository.save(user);
-        return { message: 'Password updated successfully' };
+        this.notificationClient.emit('password_changed', {
+            userId: user.id,
+            email: user.email,
+            name: user.username,
+        });
+        return { message: 'Password changed successfully' };
     }
     async forgotPassword(email) {
         const user = await this.userRepository.findOne({ where: { email } });
-        if (!user) {
+        if (!user)
             throw new common_1.NotFoundException('User not found');
-        }
-        const token = this.jwtService.sign({ sub: user.id }, { secret: process.env.RESET_SECRET, expiresIn: '10m' });
-        return { message: 'Reset email sent', token };
-    }
-    async resetPassword(token, newPassword) {
-        let payload;
-        try {
-            payload = this.jwtService.verify(token, { secret: process.env.RESET_SECRET });
-        }
-        catch (err) {
-            throw new common_1.UnauthorizedException('Invalid or expired reset token');
-        }
-        const user = await this.userRepository.findOne({ where: { id: payload.sub } });
-        if (!user) {
-            throw new common_1.NotFoundException('User not found');
-        }
-        const newHash = await bcrypt.hash(newPassword, 10);
-        user.password = newHash;
+        const token = (0, crypto_1.randomBytes)(32).toString('hex');
+        const expiresIn = 15;
+        const hashedToken = await bcrypt.hash(token, 10);
+        user.resetToken = hashedToken;
+        user.resetTokenExpires = new Date(Date.now() + expiresIn * 60 * 1000);
         await this.userRepository.save(user);
-        return { message: 'Password reset successfully' };
+        const resetUrl = `${this.configService.get('FRONTEND_URL')}/reset-password?token=${token}`;
+        this.notificationClient.emit('send_forgot_password_email', {
+            name: user.username,
+            email: user.email,
+            resetUrl,
+            expiresIn,
+        });
+        return { message: 'Password reset link sent' };
+    }
+    async resetPassword(userId, token, newPassword) {
+        const user = await this.userRepository.findOne({
+            where: { id: userId, resetTokenExpires: (0, typeorm_2.MoreThan)(new Date()) },
+        });
+        if (!user || !user.resetToken)
+            throw new common_1.BadRequestException('Invalid or expired reset token');
+        const isValid = await bcrypt.compare(token, user.resetToken);
+        if (!isValid)
+            throw new common_1.BadRequestException('Invalid or expired reset token');
+        user.password = await bcrypt.hash(newPassword, 10);
+        user.resetToken = null;
+        user.resetTokenExpires = null;
+        await this.userRepository.save(user);
+        this.notificationClient.emit('password_reset_success', {
+            email: user.email,
+            name: user.username,
+        });
+        return { message: 'Password has been reset successfully' };
     }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
-    __metadata("design:paramtypes", [typeof (_a = typeof typeorm_2.Repository !== "undefined" && typeorm_2.Repository) === "function" ? _a : Object, typeof (_b = typeof jwt_1.JwtService !== "undefined" && jwt_1.JwtService) === "function" ? _b : Object])
+    __param(2, (0, common_2.Inject)('NOTIFICATION_SERVICE')),
+    __metadata("design:paramtypes", [typeof (_a = typeof typeorm_2.Repository !== "undefined" && typeorm_2.Repository) === "function" ? _a : Object, typeof (_b = typeof jwt_1.JwtService !== "undefined" && jwt_1.JwtService) === "function" ? _b : Object, typeof (_c = typeof microservices_1.ClientProxy !== "undefined" && microservices_1.ClientProxy) === "function" ? _c : Object, typeof (_d = typeof config_1.ConfigService !== "undefined" && config_1.ConfigService) === "function" ? _d : Object, typeof (_e = typeof users_service_1.UsersService !== "undefined" && users_service_1.UsersService) === "function" ? _e : Object])
 ], AuthService);
 
 
@@ -558,7 +594,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var _a, _b, _c;
+var _a, _b, _c, _d;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.User = void 0;
 const roles_decorator_1 = __webpack_require__(/*! common/decorators/roles.decorator */ "./libs/common/src/decorators/roles.decorator.ts");
@@ -584,12 +620,20 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "password", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ nullable: true }),
+    __metadata("design:type", String)
+], User.prototype, "resetToken", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true, type: 'timestamp' }),
+    __metadata("design:type", typeof (_a = typeof Date !== "undefined" && Date) === "function" ? _a : Object)
+], User.prototype, "resetTokenExpires", void 0);
+__decorate([
     (0, typeorm_1.Column)({
         type: 'enum',
         enum: ['ADMIN', 'CUSTOMER', 'INVENTORY_MANAGER'],
         default: 'CUSTOMER',
     }),
-    __metadata("design:type", typeof (_a = typeof roles_decorator_1.Role !== "undefined" && roles_decorator_1.Role) === "function" ? _a : Object)
+    __metadata("design:type", typeof (_b = typeof roles_decorator_1.Role !== "undefined" && roles_decorator_1.Role) === "function" ? _b : Object)
 ], User.prototype, "role", void 0);
 __decorate([
     (0, typeorm_1.OneToMany)(() => user_address_entity_1.UserAddress, (address) => address.user),
@@ -597,11 +641,11 @@ __decorate([
 ], User.prototype, "addresses", void 0);
 __decorate([
     (0, typeorm_1.CreateDateColumn)(),
-    __metadata("design:type", typeof (_b = typeof Date !== "undefined" && Date) === "function" ? _b : Object)
+    __metadata("design:type", typeof (_c = typeof Date !== "undefined" && Date) === "function" ? _c : Object)
 ], User.prototype, "createdAt", void 0);
 __decorate([
     (0, typeorm_1.UpdateDateColumn)(),
-    __metadata("design:type", typeof (_c = typeof Date !== "undefined" && Date) === "function" ? _c : Object)
+    __metadata("design:type", typeof (_d = typeof Date !== "undefined" && Date) === "function" ? _d : Object)
 ], User.prototype, "updatedAt", void 0);
 exports.User = User = __decorate([
     (0, typeorm_1.Entity)()
@@ -655,8 +699,7 @@ let UsersController = class UsersController {
 };
 exports.UsersController = UsersController;
 __decorate([
-    (0, common_1.Post)(),
-    __param(0, (0, common_1.Body)()),
+    (0, microservices_1.MessagePattern)({ cmd: 'create_user' }),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [typeof (_b = typeof dtos_1.CreateUserDto !== "undefined" && dtos_1.CreateUserDto) === "function" ? _b : Object]),
     __metadata("design:returntype", void 0)
@@ -748,6 +791,7 @@ var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UsersService = void 0;
 const common_1 = __webpack_require__(/*! @nestjs/common */ "@nestjs/common");
+const bcrypt = __webpack_require__(/*! bcrypt */ "bcrypt");
 const user_entity_1 = __webpack_require__(/*! ./entities/user.entity */ "./apps/auth/src/users/entities/user.entity.ts");
 const typeorm_1 = __webpack_require__(/*! typeorm */ "typeorm");
 const typeorm_2 = __webpack_require__(/*! @nestjs/typeorm */ "@nestjs/typeorm");
@@ -755,17 +799,18 @@ let UsersService = class UsersService {
     constructor(userRepository) {
         this.userRepository = userRepository;
     }
-    async findById(userId) {
-        throw new Error('Method not implemented.');
-    }
-    async findByEmail(email) {
-        throw new Error('Method not implemented.');
-    }
-    async updatePassword(userId, newHash) {
-        throw new Error('Method not implemented.');
-    }
     async createUser(createUserDto) {
-        const user = this.userRepository.create(createUserDto);
+        const existingUser = await this.userRepository.findOne({
+            where: [
+                { email: createUserDto.email },
+                { username: createUserDto.username }
+            ]
+        });
+        if (existingUser) {
+            throw new common_1.ConflictException('User already exists');
+        }
+        const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+        const user = this.userRepository.create(Object.assign(Object.assign({}, createUserDto), { password: hashedPassword }));
         return this.userRepository.save(user);
     }
     async deleteUser(id) {
@@ -817,6 +862,7 @@ exports.QUEUES = {
     CART_QUEUE: 'cart_queue',
     AUTH_QUEUE: 'auth_queue',
     PRODUCT_QUEUE: 'product_queue',
+    SHIPPING_QUEUE: 'shipping_queue',
 };
 
 
@@ -860,7 +906,7 @@ exports.ERROR_MESSAGES = {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ADDRESS_EVENTS = exports.EVENT_PATTERNS = void 0;
+exports.USER_EVENTS = exports.ADDRESS_EVENTS = exports.EVENT_PATTERNS = void 0;
 exports.EVENT_PATTERNS = {
     USER_REGISTERED: 'user_registered',
     USER_LOGGED_IN: 'user_logged_in',
@@ -887,6 +933,11 @@ exports.ADDRESS_EVENTS = {
     CREATED: 'address_created',
     UPDATED: 'address_updated',
     DELETED: 'address_deleted',
+};
+exports.USER_EVENTS = {
+    CREATED: 'user_created',
+    UPDATED: 'user_updated',
+    DELETED: 'user_deleted',
 };
 
 
@@ -993,6 +1044,13 @@ __decorate([
 ], ChangePasswordDto.prototype, "oldPassword", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsStrongPassword)({
+        minLength: 8,
+        minLowercase: 1,
+        minUppercase: 1,
+        minNumbers: 1,
+        minSymbols: 1,
+    }),
     __metadata("design:type", String)
 ], ChangePasswordDto.prototype, "newPassword", void 0);
 
@@ -1089,6 +1147,7 @@ exports.CreateUserDto = CreateUserDto;
 __decorate([
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.MinLength)(3),
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "username", void 0);
 __decorate([
@@ -1210,7 +1269,7 @@ __decorate([
 ], LoginDto.prototype, "email", void 0);
 __decorate([
     (0, class_validator_1.IsNotEmpty)(),
-    (0, class_validator_1.IsStrongPassword)(),
+    (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], LoginDto.prototype, "password", void 0);
 
@@ -1241,6 +1300,7 @@ class RefreshTokenDto {
 exports.RefreshTokenDto = RefreshTokenDto;
 __decorate([
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], RefreshTokenDto.prototype, "refreshToken", void 0);
 
@@ -1271,10 +1331,25 @@ class ResetPasswordDto {
 exports.ResetPasswordDto = ResetPasswordDto;
 __decorate([
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], ResetPasswordDto.prototype, "userId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], ResetPasswordDto.prototype, "token", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.MinLength)(8, { message: 'Password must be at least 8 characters' }),
+    (0, class_validator_1.IsStrongPassword)({
+        minLength: 8,
+        minLowercase: 1,
+        minUppercase: 1,
+        minNumbers: 1,
+        minSymbols: 1,
+    }),
     __metadata("design:type", String)
 ], ResetPasswordDto.prototype, "newPassword", void 0);
 
@@ -1949,6 +2024,16 @@ module.exports = require("rxjs/operators");
 /***/ ((module) => {
 
 module.exports = require("typeorm");
+
+/***/ }),
+
+/***/ "crypto":
+/*!*************************!*\
+  !*** external "crypto" ***!
+  \*************************/
+/***/ ((module) => {
+
+module.exports = require("crypto");
 
 /***/ }),
 

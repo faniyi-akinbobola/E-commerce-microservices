@@ -8,8 +8,8 @@ export class UsersController {
 
     constructor(private readonly usersService: UsersService) {}
 
-    @Post()
-    createUser(@Body() createUserDto : CreateUserDto) {
+    @MessagePattern({cmd:'create_user'})
+    createUser(createUserDto : CreateUserDto) {
         return this.usersService.createUser(createUserDto);
     }
 

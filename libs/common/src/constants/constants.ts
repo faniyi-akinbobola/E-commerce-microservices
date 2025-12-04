@@ -6,4 +6,5 @@ export const QUEUES = {
     CART_QUEUE: 'cart_queue',
     AUTH_QUEUE: 'auth_queue',
     PRODUCT_QUEUE: 'product_queue',
+    SHIPPING_QUEUE: 'shipping_queue',
 };

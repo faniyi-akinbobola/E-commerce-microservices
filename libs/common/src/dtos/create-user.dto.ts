@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, IsStrongPassword, IsOptional, IsEnum } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, IsStrongPassword, IsOptional, IsEnum, MinLength } from 'class-validator';
 
 export enum UserRole {
     ADMIN = 'ADMIN',
@@ -10,12 +10,14 @@ export enum UserRole {
 export class CreateUserDto {
     @IsString()
     @IsNotEmpty()
+    @MinLength(3)
     username: string;
 
     @IsNotEmpty()
     @IsEmail()
     email: string;
 
+    
     @IsStrongPassword({
         minLength: 8,
         minLowercase: 1,
@@ -29,6 +31,5 @@ export class CreateUserDto {
     @IsEnum(UserRole)
     role?: UserRole;
 
-    // addresses are created separately, so not included here
 }
 

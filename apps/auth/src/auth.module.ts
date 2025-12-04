@@ -7,6 +7,9 @@ import { UsersAddressModule } from './users-address/users-address.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './users/entities/user.entity';
 import { JwtModule } from '@nestjs/jwt';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { QUEUES } from '@apps/common';  
 
 @Module({
   imports: [DatabaseModule, UsersModule, UsersAddressModule,
@@ -14,7 +17,23 @@ import { JwtModule } from '@nestjs/jwt';
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'defaultSecret',
       signOptions: { expiresIn: '1h' },
-    }) 
+    }),
+    ClientsModule.registerAsync([
+  {
+    name: 'NOTIFICATION_SERVICE',
+    useFactory: (config: ConfigService) => ({
+      transport: Transport.RMQ,
+      options: {
+        urls: [config.get<string>('RABBITMQ_URL')],
+        queue: config.get<string>(QUEUES.NOTIFICATIONS_QUEUE),
+        queueOptions: { durable: true },
+      },
+    }),
+    inject: [ConfigService],
+    imports: [ConfigModule],
+  },
+])
+ 
   ],
   controllers: [AuthController],
   providers: [AuthService]

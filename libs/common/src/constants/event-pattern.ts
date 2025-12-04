@@ -42,8 +42,8 @@ export const ADDRESS_EVENTS = {
   DELETED: 'address_deleted',
 };
 
-// export const USER_EVENTS = {
-//   CREATED: 'user_created',
-//   UPDATED: 'user_updated',
-//   DELETED: 'user_deleted',
-// };
+export const USER_EVENTS = {
+  CREATED: 'user_created',
+  UPDATED: 'user_updated',
+  DELETED: 'user_deleted',
+};

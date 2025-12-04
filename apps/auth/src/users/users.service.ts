@@ -1,4 +1,5 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -11,20 +12,26 @@ export class UsersService {
 
     constructor(@InjectRepository(User) private readonly userRepository: Repository<User>){}
 
-    async findById(userId: string) {
-      throw new Error('Method not implemented.');
-    }
-
-    async findByEmail(email: string) {
-      throw new Error('Method not implemented.');
-    }
-
-    async updatePassword(userId: string, newHash: string) {
-      throw new Error('Method not implemented.');
-    }
-
     async createUser(createUserDto: CreateUserDto): Promise<User> {
-        const user = this.userRepository.create(createUserDto);
+        // Check if user already exists (by email or username)
+        const existingUser = await this.userRepository.findOne({
+            where: [
+                { email: createUserDto.email },
+                { username: createUserDto.username }
+            ]
+        });
+        if (existingUser) {
+            throw new ConflictException('User already exists');
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+
+        // Create user entity
+        const user = this.userRepository.create({
+            ...createUserDto,
+            password: hashedPassword,
+        });
         return this.userRepository.save(user);
     }
 

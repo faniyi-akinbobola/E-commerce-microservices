@@ -8,7 +8,6 @@ export class UsersController {
 
     constructor(private readonly usersService: UsersService) {}
 
-    @MessagePattern({cmd:'create_user'})
     createUser(createUserDto : CreateUserDto) {
         return this.usersService.createUser(createUserDto);
     }
@@ -19,12 +18,18 @@ export class UsersController {
     }
 
     @MessagePattern({ cmd: 'update_user' })
-    updateUser(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-        return this.usersService.updateUser(id, updateUserDto);
+    updateUser(data: { id: string, requesterId: string, updateUserDto: UpdateUserDto }) {
+        return this.usersService.updateUser(data.id, data.requesterId, data.updateUserDto);
     }
 
     @MessagePattern({ cmd: 'delete_user' })
-    deleteUser(@Param('id') id: string) {
-        return this.usersService.deleteUser(id);
+    deleteUser(data: { id: string, requesterId: string }) {
+        return this.usersService.deleteUser(data.id, data.requesterId);
     }
+
+    @MessagePattern({cmd: 'get_user_by_id'})
+    getUserById(data: {id: string}){
+        return this.usersService.getUserById(data.id);
+    }
+
 }

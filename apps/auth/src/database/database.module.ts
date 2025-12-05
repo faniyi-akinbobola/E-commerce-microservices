@@ -19,17 +19,20 @@ import * as joi from 'joi';
     }),
         
         TypeOrmModule.forRootAsync({
-        inject: [ConfigService],
-        useFactory: (configService: ConfigService) => ({
-            type: 'postgres',
-        host: configService.get<string>('DB_HOST'),
-            port: configService.get<number>('DB_PORT'),
-        username: configService.get<string>('DB_USERNAME'),
-        password: configService.get<string>('DB_PASSWORD'),
-        database: configService.get<string>('DB_DATABASE'),
-        entities: [path.join(__dirname, '/../**/*.entity{.ts,.js}')],
-        synchronize: true,
-    })})],
+            inject: [ConfigService],
+            useFactory: (configService: ConfigService) => ({
+                type: 'postgres',
+                host: configService.get<string>('DB_HOST'),
+                port: configService.get<number>('DB_PORT'),
+                username: configService.get<string>('DB_USERNAME'),
+                password: configService.get<string>('DB_PASSWORD'),
+                database: configService.get<string>('DB_DATABASE'),
+                entities: [path.join(__dirname, '/../**/*.entity{.ts,.js}')],
+                migrations: [path.join(__dirname, '/../migrations/*{.ts,.js}')],
+                migrationsTableName: 'migrations',
+                synchronize: true, // Auto-create tables (DEV ONLY!)
+            }),
+        })],
     exports: [TypeOrmModule],
 })
 export class DatabaseModule {}

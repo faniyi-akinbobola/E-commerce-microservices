@@ -5,6 +5,8 @@ import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateUserDto } from 'common/dtos/create-user.dto';
 import { UpdateUserDto } from 'common/dtos/update-user.dto';
+import { RpcException } from '@nestjs/microservices';
+import { RpcExceptionFilterMicroservice } from '@apps/common';
 
 
 @Injectable()
@@ -21,7 +23,7 @@ export class UsersService {
             ]
         });
         if (existingUser) {
-            throw new ConflictException('User already exists');
+            throw new RpcException('User already exists');
         }
 
         // Hash password
@@ -35,21 +37,27 @@ export class UsersService {
         return this.userRepository.save(user);
     }
 
-    async deleteUser(id: string): Promise<User> {
-        const user = await this.userRepository.findOne({where: {id}});
+    async deleteUser(targetUserId: string, requesterId: string): Promise<User> {
+        if (targetUserId !== requesterId) {
+            throw new RpcException('Forbidden: You can only delete your own account');
+        }
+        const user = await this.userRepository.findOne({ where: { id: targetUserId } });
         if (!user) {
-            throw new NotFoundException('User not found');
+            throw new RpcException('User not found');
         }
         return this.userRepository.remove(user);
     }
 
-    async updateUser(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+    async updateUser(targetUserId: string, requesterId: string, updateUserDto: UpdateUserDto): Promise<User> {
+        if (targetUserId !== requesterId) {
+            throw new RpcException('Forbidden: You can only update your own account');
+        }
         const user = await this.userRepository.preload({
-            id: id,
+            id: targetUserId,
             ...updateUserDto
         });
         if (!user) {
-            throw new NotFoundException('User not found');
+            throw new RpcException('User not found');
         }
         return this.userRepository.save(user);
     }
@@ -57,8 +65,16 @@ export class UsersService {
     async getUsers(): Promise<User[]> {
         const users = await this.userRepository.find();
         if (!users) {
-            throw new NotFoundException('No users found');
+            throw new RpcException('No users found');
         }
         return users;
+    }
+
+    async getUserById(id: string) : Promise<User>{
+        const user = await this.userRepository.findOne({where: {id}});
+        if (!user) {
+            throw new RpcException('User Not Found');
+        }
+        return user;
     }
 }

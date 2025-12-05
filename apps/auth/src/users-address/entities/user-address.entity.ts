@@ -28,7 +28,7 @@ export class UserAddress {
   @Column()
   country: string;
 
-  @Column()
+  @Column({nullable: true})
   postalCode: string;
 
   @Column({ default: false })

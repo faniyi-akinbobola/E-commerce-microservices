@@ -19,10 +19,25 @@ import { UsersAddressController } from './users-address/users-address.controller
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ShippingController } from './shipping/shipping.controller';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
+import { JwtStrategy } from './strategy/jwt.strategy';
 
 @Module({
   imports: [
-ClientsModule.registerAsync([
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    PassportModule,
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        secret: config.get<string>('JWT_SECRET') || 'defaultSecret',
+        signOptions: { expiresIn: '1h' },
+      }),
+    }),
+    ClientsModule.registerAsync([
       {
         name: 'PRODUCT_SERVICE',
         imports: [ConfigModule],
@@ -136,6 +151,7 @@ ClientsModule.registerAsync([
     ShippingController,
   ],
   providers: [
+    JwtStrategy,
     {
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,

@@ -42,4 +42,9 @@ export class AuthController {
     return this.authService.refreshTokens(payload.refreshToken);
   }
 
+  @MessagePattern({ cmd: 'signOut' })
+  signOut(@Payload() payload: { userId: string }) {
+    return this.authService.signOut(payload.userId);
+  }
+
 }

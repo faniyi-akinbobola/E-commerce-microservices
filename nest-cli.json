@@ -4,7 +4,8 @@
   "sourceRoot": "apps/api-gateway/src",
   "compilerOptions": {
     "webpack": true,
-    "tsConfigPath": "apps/api-gateway/tsconfig.app.json"
+    "tsConfigPath": "apps/api-gateway/tsconfig.app.json",
+    "webpackConfigPath": "webpack.config.js"
   },
   "projects": {
     "api-gateway": {
@@ -13,7 +14,8 @@
       "entryFile": "main",
       "sourceRoot": "apps/api-gateway/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/api-gateway/tsconfig.app.json"
+        "tsConfigPath": "apps/api-gateway/tsconfig.app.json",
+        "webpack": false
       }
     },
     "auth": {
@@ -22,7 +24,8 @@
       "entryFile": "main",
       "sourceRoot": "apps/auth/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/auth/tsconfig.app.json"
+        "tsConfigPath": "apps/auth/tsconfig.app.json",
+        "webpack": false
       }
     },
     "cart": {

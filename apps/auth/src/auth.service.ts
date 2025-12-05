@@ -326,6 +326,26 @@ async resetPassword(userId: string, token: string, newPassword: string) {
   return { message: 'Password has been reset successfully' };
 }
 
+  // Sign out (client-side token invalidation)
+  async signOut(userId: string) {
+    // In a JWT-based system, logout is typically handled client-side by removing the token
+    // This endpoint can be used for logging purposes or future token blacklisting
+    
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Optional: Emit logout event for logging/analytics
+    this.notificationClient.emit('user_logged_out', {
+      userId: user.id,
+      email: user.email,
+      timestamp: new Date(),
+    });
+
+    return { message: 'Successfully signed out' };
+  }
+
 
     // For password reset
   // @Column({ nullable: true })

@@ -1,10 +1,10 @@
 import { Controller, Get, Post, Delete, Patch, Inject, Param, Body, UseGuards, Req } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { UpdateUserDto } from 'common/dtos/update-user.dto';
-import { JwtAuthGuard } from '@apps/common';
+import { JwtBlacklistGuard } from '../guards/jwt-blacklist.guard';
 
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtBlacklistGuard)
 @Controller('users')
 export class UsersController {
 
@@ -23,7 +23,8 @@ export class UsersController {
 
     @Delete('deleteuser')
     deleteUser(@Req() req) {
-        return this.authClient.send({ cmd: 'delete_user' }, { id: req.user.id, requesterId: req.user.id });
+        const jwtToken = req.headers['authorization']?.replace('Bearer ', '');
+        return this.authClient.send({ cmd: 'delete_user' }, { id: req.user.id, requesterId: req.user.id, token: jwtToken });
     }
 
     @Patch('updateuser')

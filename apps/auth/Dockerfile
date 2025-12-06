@@ -18,7 +18,7 @@ RUN npm run build auth && find /usr/src/app/dist -type f
 FROM node:18-alpine AS production
 WORKDIR /usr/src/app/apps/auth
 COPY package*.json ./
-RUN npm ci --legacy-peer-deps --omit=dev
+RUN npm ci --legacy-peer-deps --omit=dev && npm install pino-pretty
 COPY --from=build /usr/src/app/dist/apps/auth ./dist
 COPY --from=build /usr/src/app/apps/auth/.env .env
 COPY --from=build /usr/src/app/apps/auth/polyfill.js ./polyfill.js

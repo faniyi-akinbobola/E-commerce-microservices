@@ -61,7 +61,8 @@
       "entryFile": "main",
       "sourceRoot": "apps/notifications/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/notifications/tsconfig.app.json"
+        "tsConfigPath": "apps/notifications/tsconfig.app.json",
+        "webpack": false
       }
     },
     "order": {

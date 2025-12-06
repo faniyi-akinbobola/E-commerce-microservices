@@ -29,7 +29,7 @@ export class AuthController {
 
   @MessagePattern({ cmd: 'resetPassword' })
   resetPassword(@Payload() resetPasswordDto: ResetPasswordDto) {
-    return this.authService.resetPassword(resetPasswordDto.userId, resetPasswordDto.token, resetPasswordDto.newPassword);
+    return this.authService.resetPassword(resetPasswordDto.token, resetPasswordDto.newPassword);
   }
 
   @MessagePattern({ cmd: 'getProfile' })
@@ -43,8 +43,18 @@ export class AuthController {
   }
 
   @MessagePattern({ cmd: 'signOut' })
-  signOut(@Payload() payload: { userId: string }) {
-    return this.authService.signOut(payload.userId);
+  signOut(@Payload() payload: { userId: string, token: string }) {
+    return this.authService.signOut(payload.userId, payload.token);
+  }
+
+  @MessagePattern({ cmd: 'check_blacklist' })
+  checkBlacklist(@Payload() payload: { token: string }) {
+    return this.authService.checkBlacklist(payload.token);
+  }
+
+  @MessagePattern({ cmd: 'check_user_exists' })
+  checkUserExists(@Payload() payload: { userId: string }) {
+    return this.authService.checkUserExists(payload.userId);
   }
 
 }

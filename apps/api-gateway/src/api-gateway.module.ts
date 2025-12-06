@@ -22,6 +22,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './strategy/jwt.strategy';
+import { JwtBlacklistGuard } from './guards/jwt-blacklist.guard';
 
 @Module({
   imports: [
@@ -152,6 +153,7 @@ import { JwtStrategy } from './strategy/jwt.strategy';
   ],
   providers: [
     JwtStrategy,
+    JwtBlacklistGuard,
     {
       provide: APP_FILTER,
       useClass: HttpExceptionFilter,

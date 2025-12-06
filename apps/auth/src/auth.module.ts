@@ -10,10 +10,11 @@ import { JwtModule } from '@nestjs/jwt';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { QUEUES } from '@apps/common';  
+import { Blacklist } from './blacklist/blacklist.entity';
 
 @Module({
   imports: [DatabaseModule, UsersModule, UsersAddressModule,
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, Blacklist]),
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'defaultSecret',
       signOptions: { expiresIn: '1h' },
@@ -25,7 +26,7 @@ import { QUEUES } from '@apps/common';
       transport: Transport.RMQ,
       options: {
         urls: [config.get<string>('RABBITMQ_URL')],
-        queue: config.get<string>(QUEUES.NOTIFICATIONS_QUEUE),
+        queue: QUEUES.NOTIFICATIONS_QUEUE,
         queueOptions: { durable: true },
       },
     }),

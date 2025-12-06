@@ -6,3 +6,4 @@ export * from './pipes';
 export * from './utils';
 export * from './decorators';
 export * from './guards';
+export * from './middleware';

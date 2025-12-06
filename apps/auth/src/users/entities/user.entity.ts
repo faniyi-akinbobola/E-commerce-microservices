@@ -21,6 +21,10 @@ export class User {
     @Column({ nullable: true })
     resetToken: string;
 
+        // user.entity.ts
+    @Column({ nullable: true })
+    refreshToken: string;
+
     @Column({ nullable: true, type: 'timestamp' })
     resetTokenExpires: Date;
 

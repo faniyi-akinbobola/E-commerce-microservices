@@ -11,6 +11,8 @@ import { Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { randomBytes } from 'crypto';
 import { ConfigService } from '@nestjs/config';
+import { Blacklist } from './blacklist/blacklist.entity';
+
 
 @Injectable()
 export class AuthService {
@@ -20,7 +22,8 @@ export class AuthService {
     private jwtService: JwtService,
     @Inject('NOTIFICATION_SERVICE') private readonly notificationClient: ClientProxy,
     private readonly configService: ConfigService,
-    private readonly usersService: UsersService
+    private readonly usersService: UsersService,
+    @InjectRepository(Blacklist) private readonly blacklistRepository: Repository<Blacklist>,
   ) {}
 
 
@@ -37,14 +40,24 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Generate JWT token
+    // Generate JWT tokens
     const payload = { sub: user.id, email: user.email, role: user.role };
-    const accessToken = this.jwtService.sign(payload);
+    const accessToken = this.jwtService.sign(payload, {
+      secret: this.configService.get('JWT_SECRET'),
+      expiresIn: '1h',
+    });
 
-    this.notificationClient.emit('user_logged_in', { userId: user.id, name: user.username, email: user.email });
+    // Generate new refresh token
+    const refreshToken = randomBytes(32).toString('hex');
+    user.refreshToken = refreshToken;
+    
+    await this.userRepository.save(user);
+
+    this.notificationClient.emit('user_logged_in', { userId: user.id, username: user.username, email: user.email });
 
     return {
       accessToken,
+      refreshToken: user.refreshToken,
       user: {
         id: user.id,
         username: user.username,
@@ -59,14 +72,18 @@ export class AuthService {
     const user = await this.usersService.createUser(createUserDto);
 
     // Emit notification
-    this.notificationClient.emit('user_created', { userId: user.id, name: user.username, email: user.email });
+  this.notificationClient.emit('user_created', { userId: user.id, username: user.username, email: user.email });
 
     // Generate JWT token
     const payload = { sub: user.id, username: user.username, role: user.role };
     const accessToken = this.jwtService.sign(payload);
 
+    await this.userRepository.save(user);
+
+
     return {
       accessToken,
+      refreshToken: user.refreshToken,
       user: {
         id: user.id,
         username: user.username,
@@ -134,25 +151,23 @@ export class AuthService {
 // }
 
 async refreshTokens(refreshToken: string) {
-  let payload: any;
-  try {
-    payload = this.jwtService.verify(refreshToken, { secret: this.configService.get('REFRESH_SECRET') });
-  } catch (err) {
+  // Find user by refresh token
+  const user = await this.userRepository.findOne({ where: { refreshToken } });
+  
+  if (!user) {
     throw new UnauthorizedException('Invalid or expired refresh token');
   }
 
-  const user = await this.userRepository.findOne({ where: { id: payload.sub } });
-  if (!user) throw new NotFoundException('User not found');
-
+  // Generate new access token
   const accessToken = this.jwtService.sign(
     { sub: user.id, email: user.email, role: user.role },
-    { secret: this.configService.get('JWT_SECRET'), expiresIn: '15m' },
+    { secret: this.configService.get('JWT_SECRET'), expiresIn: '1h' },
   );
 
-  const newRefreshToken = this.jwtService.sign(
-    { sub: user.id, email: user.email },
-    { secret: this.configService.get('REFRESH_SECRET'), expiresIn: '7d' },
-  );
+  // Generate new refresh token
+  const newRefreshToken = randomBytes(32).toString('hex');
+  user.refreshToken = newRefreshToken;
+  await this.userRepository.save(user);
 
   return {
     accessToken,
@@ -263,7 +278,8 @@ async forgotPassword(email: string) {
     expiresIn,
   });
 
-  return { message: 'Password reset link sent' };
+  // TODO: Remove token from response in production (for testing only)
+  return { message: 'Password reset link sent', token };
 }
 
 
@@ -295,18 +311,28 @@ async forgotPassword(email: string) {
 //   return { message: 'Password reset successfully' };
 // }
 
-async resetPassword(userId: string, token: string, newPassword: string) {
-  const user = await this.userRepository.findOne({
-    where: { id: userId, resetTokenExpires: MoreThan(new Date()) },
+async resetPassword(token: string, newPassword: string) {
+  // Find user with valid reset token (not expired)
+  const users = await this.userRepository.find({
+    where: { resetTokenExpires: MoreThan(new Date()) },
   });
 
-  if (!user || !user.resetToken)
-    throw new BadRequestException('Invalid or expired reset token');
+  let user = null;
+  
+  // Check which user has the matching token
+  for (const u of users) {
+    if (u.resetToken) {
+      const isValid = await bcrypt.compare(token, u.resetToken);
+      if (isValid) {
+        user = u;
+        break;
+      }
+    }
+  }
 
-  // Verify token
-  const isValid = await bcrypt.compare(token, user.resetToken);
-  if (!isValid)
+  if (!user) {
     throw new BadRequestException('Invalid or expired reset token');
+  }
 
   // Hash new password
   user.password = await bcrypt.hash(newPassword, 10);
@@ -327,7 +353,7 @@ async resetPassword(userId: string, token: string, newPassword: string) {
 }
 
   // Sign out (client-side token invalidation)
-  async signOut(userId: string) {
+  async signOut(userId: string, jwtToken: string) {
     // In a JWT-based system, logout is typically handled client-side by removing the token
     // This endpoint can be used for logging purposes or future token blacklisting
     
@@ -343,7 +369,22 @@ async resetPassword(userId: string, token: string, newPassword: string) {
       timestamp: new Date(),
     });
 
+    // In your signOut method
+    await this.blacklistRepository.save({ token: jwtToken });
+
     return { message: 'Successfully signed out' };
+  }
+
+  // Check if token is blacklisted
+  async checkBlacklist(token: string) {
+    const isBlacklisted = await this.blacklistRepository.findOne({ where: { token } });
+    return { isBlacklisted: !!isBlacklisted };
+  }
+
+  // Check if user exists (for deleted user validation)
+  async checkUserExists(userId: string) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    return { exists: !!user };
   }
 
 

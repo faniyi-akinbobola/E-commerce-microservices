@@ -36,7 +36,7 @@ export class RequestLoggerMiddleware implements NestMiddleware {
       res(res: any) {
         return {
           statusCode: res.statusCode,
-          contentLength: res.get('content-length'),
+          contentLength: res.getHeader ? res.getHeader('content-length') : undefined,
         };
       },
     },

@@ -17,7 +17,7 @@ RUN npm run build api-gateway && find /usr/src/app/dist -type f
 FROM node:18-alpine AS production
 WORKDIR /usr/src/app/apps/api-gateway
 COPY package*.json ./
-RUN npm ci --legacy-peer-deps --omit=dev
+RUN npm ci --legacy-peer-deps --omit=dev && npm install pino-pretty
 COPY --from=build /usr/src/app/dist/apps/api-gateway ./dist
 COPY --from=build /usr/src/app/apps/api-gateway/.env .env
 

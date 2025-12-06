@@ -1,10 +1,11 @@
 import { Controller, Delete, Get, Patch, Post,Body, Param, Req, UseGuards } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { Inject } from '@nestjs/common';
-import { UpdateUserAddressDto, CreateUserAddressDto, JwtAuthGuard } from '@apps/common';
+import { UpdateUserAddressDto, CreateUserAddressDto } from '@apps/common';
+import { JwtBlacklistGuard } from '../guards/jwt-blacklist.guard';
 
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtBlacklistGuard)
 @Controller('users-address')
 export class UsersAddressController {
 

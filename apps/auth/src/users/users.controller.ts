@@ -23,8 +23,8 @@ export class UsersController {
     }
 
     @MessagePattern({ cmd: 'delete_user' })
-    deleteUser(data: { id: string, requesterId: string }) {
-        return this.usersService.deleteUser(data.id, data.requesterId);
+    deleteUser(data: { id: string, requesterId: string, token?: string }) {
+        return this.usersService.deleteUser(data.id, data.requesterId, data.token);
     }
 
     @MessagePattern({cmd: 'get_user_by_id'})

@@ -3,10 +3,6 @@ import { IsString,IsNotEmpty,MinLength, IsStrongPassword } from 'class-validator
 export class ResetPasswordDto {
   @IsString()
   @IsNotEmpty()
-  userId: string;
-
-  @IsString()
-  @IsNotEmpty()
   token: string;
 
   @IsString()

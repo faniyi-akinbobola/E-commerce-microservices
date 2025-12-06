@@ -3,6 +3,7 @@ import { ApiGatewayModule } from './api-gateway.module';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as cookieParser from 'cookie-parser';
+import { RequestLoggerMiddleware } from '@apps/common';
 
 
 // Load .env file manually
@@ -31,6 +32,11 @@ async function bootstrap() {
   });
   
   const port = process.env.PORT || 3000;
+  
+  // Apply request logger middleware
+  const requestLogger = new RequestLoggerMiddleware();
+  app.use((req, res, next) => requestLogger.use(req, res, next));
+  
   await app.listen(port);
   console.log(`API Gateway is running on: http://localhost:${port}`);
 }

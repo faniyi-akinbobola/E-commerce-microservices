@@ -7,3 +7,7 @@ export * from './forgot-password.dto';
 export * from './reset-password.dto';
 export * from './change-password.dto';
 export * from './login.dto';
+export * from './create-product.dto';
+export * from './update-product.dto';
+export * from './create-category.dto';
+export * from './update-category.dto';

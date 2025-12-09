@@ -75,7 +75,7 @@ import { JwtBlacklistGuard } from './guards/jwt-blacklist.guard';
           transport: Transport.RMQ,
           options: {
             urls: [config.get<string>('RABBITMQ_URL') as string],
-            queue: config.get<string>(QUEUES.CART_QUEUE) as string, 
+            queue: QUEUES.CART_QUEUE, 
             queueOptions: { durable: true },
           },
         }),
@@ -89,7 +89,7 @@ import { JwtBlacklistGuard } from './guards/jwt-blacklist.guard';
           transport: Transport.RMQ,
           options: {
             urls: [config.get<string>('RABBITMQ_URL') as string],
-            queue: config.get<string>(QUEUES.INVENTORY_QUEUE) as string, 
+            queue: QUEUES.INVENTORY_QUEUE, 
             queueOptions: { durable: true },
           },
         }),
@@ -103,7 +103,7 @@ import { JwtBlacklistGuard } from './guards/jwt-blacklist.guard';
           transport: Transport.RMQ,
           options: {
             urls: [config.get<string>('RABBITMQ_URL') as string],
-            queue: config.get<string>(QUEUES.ORDER_QUEUE) as string, 
+            queue: QUEUES.ORDER_QUEUE, 
             queueOptions: { durable: true },
           },
         }),
@@ -117,7 +117,7 @@ import { JwtBlacklistGuard } from './guards/jwt-blacklist.guard';
           transport: Transport.RMQ,
           options: {
             urls: [config.get<string>('RABBITMQ_URL') as string],
-            queue: config.get<string>(QUEUES.PAYMENT_QUEUE) as string, 
+            queue: QUEUES.PAYMENT_QUEUE, 
             queueOptions: { durable: true },
           },
         }),
@@ -131,7 +131,7 @@ import { JwtBlacklistGuard } from './guards/jwt-blacklist.guard';
           transport: Transport.RMQ,
           options: {
             urls: [config.get<string>('RABBITMQ_URL') as string],
-            queue: config.get<string>(QUEUES.SHIPPING_QUEUE) as string, 
+            queue: QUEUES.SHIPPING_QUEUE, 
             queueOptions: { durable: true },
           },
         }),

@@ -25,6 +25,18 @@ services:
     volumes:
       - product-db-data:/data/db
 
+  inventory-db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: inventory_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - inventory-db-data:/var/lib/postgresql/data
+
   rabbitmq:
     image: rabbitmq:3-management
     restart: always
@@ -100,6 +112,32 @@ services:
     # ports:
     #   - "3003:3003"
 
+  inventory-service:
+    build:
+      context: .
+      dockerfile: apps/inventory/Dockerfile
+    environment:
+      DB_HOST: inventory-db
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_DATABASE: inventory_db
+      MONGODB_URI: mongodb://admin:admin123@product-db:27017/product_db?authSource=admin
+      RabbitMQ_URL: amqp://guest:guest@rabbitmq:5672
+    env_file:
+      - .env
+    depends_on:
+      inventory-db:
+        condition: service_started
+      product-db:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    # Uncomment if you want to expose a port for debugging
+    # ports:
+    #   - "3004:3004"
+
 volumes:
   auth-db-data:
   product-db-data:
+  inventory-db-data:

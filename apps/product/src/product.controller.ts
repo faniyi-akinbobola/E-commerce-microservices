@@ -22,12 +22,12 @@ export class ProductController {
 
   @MessagePattern({cmd : 'get_products_by_slug'})
   getProductsBySlug(@Payload() slug:string){
-    return this.productService.getProductsBySlug();
+    return this.productService.getProductsBySlug(slug);
   }
 
   @MessagePattern({cmd: 'get_product_by_id'})
-  getProductById(@Param('id') id:string){
-    return this.productService.getProductById();
+  getProductById(@Payload() {id}: {id: string}){
+    return this.productService.getProductById(id);
   }
 
   @MessagePattern({cmd : 'get_available_products'})
@@ -36,23 +36,19 @@ export class ProductController {
   }
 
   @MessagePattern({cmd: 'update_product'})
-  updateProduct(@Param('id') id:string, @Body() body: UpdateProductDto){
-    return this.productService.updateProduct();
-  }
-
-  @MessagePattern({cmd: 'replace_product'})
-  replaceProduct(@Param('id') id:string){
-    return this.productService.replaceProduct();
+  updateProduct(@Payload() payload: { id: string } & UpdateProductDto){
+    const { id, ...body } = payload;
+    return this.productService.updateProduct(id, body);
   }
 
   @MessagePattern({cmd: 'delete_product'})
-  deleteProduct(@Param('id') id: string){
-    return this.productService.deleteProduct();
+  deleteProduct(@Payload() {id}: {id: string}){
+    return this.productService.deleteProduct(id);
   }
 
   @MessagePattern({cmd: 'get_products_by_category'})
-  getProductsByCategory(){
-    return this.productService.getProductsByCategory();
+  getProductsByCategory(@Payload() {slug} : {slug: string}){
+    return this.productService.getProductsByCategory(slug);
   }
 
   // category routes
@@ -87,7 +83,5 @@ export class ProductController {
   deleteCategory(@Payload() {id}: {id: string}){
     return this.productService.deleteCategory(id);
   }
-
-
 
 }

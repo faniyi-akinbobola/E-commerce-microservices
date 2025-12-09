@@ -32,6 +32,13 @@ export class Product {
     })
     categoryIds: ObjectId[];
 
+    @Column({
+        nullable: true,
+        array: true,
+        type: 'simple-array'
+    })
+    images?: string[];
+
     @Column({ nullable: true })
     brand?: string;
 

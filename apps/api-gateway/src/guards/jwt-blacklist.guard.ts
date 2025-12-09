@@ -2,16 +2,26 @@ import { Injectable, ExecutionContext, UnauthorizedException, Inject } from '@ne
 import { AuthGuard } from '@nestjs/passport';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import { Reflector } from '@nestjs/core';
+import { IS_PUBLIC_KEY } from '@apps/common';
 
 @Injectable()
 export class JwtBlacklistGuard extends AuthGuard('jwt') {
   constructor(
     @Inject('AUTH_SERVICE') private readonly authClient: ClientProxy,
+    private reflector: Reflector,
   ) {
     super();
   }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // Check for @Public decorator
+    const isPublic = this.reflector.getAllAndOverride<boolean>(
+      IS_PUBLIC_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    if (isPublic) return true;
+
     // First, validate the JWT token using passport
     const isValid = await super.canActivate(context);
     if (!isValid) {

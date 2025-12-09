@@ -3,6 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { ConfigService } from '@nestjs/config';
 import * as joi from 'joi';
+import { Product } from '../entities/product.entity';
+import { Category } from '../entities/category.entity';
 
 @Module({
     imports: [
@@ -19,6 +21,7 @@ import * as joi from 'joi';
             type: 'mongodb',
             url: configService.get<string>('MONGODB_URI'),
             synchronize: true,
+            entities: [Product, Category],
         }),
         inject: [ConfigService],
     })],

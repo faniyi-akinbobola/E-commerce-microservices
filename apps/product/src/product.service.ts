@@ -17,7 +17,7 @@ export class ProductService {
 
 // category methods
  async deleteCategory(id: string) : Promise<Category> {
-    const category = await this.categoryRepository.findOne({where: {_id: id}});
+    const category = await this.categoryRepository.findOne({where: {_id: new ObjectId(id)} as any});
     if (!category) {
       throw new RpcException('Category not found');
     }
@@ -25,23 +25,31 @@ export class ProductService {
   }
 
   async updateCategory(id:string, updateCategoryDto: UpdateCategoryDto): Promise<Category> {
-    throw new Error('Method not implemented.');
-    const category = await this.categoryRepository.findOne({where: {_id: id}});
+    const category = await this.categoryRepository.findOne({where: {_id: new ObjectId(id)} as any});
     if (!category) {
       throw new RpcException('Category not found');
     }
-    Object.assign(category, updateCategoryDto);
+    
+    // If name is being updated, regenerate slug
+    if (updateCategoryDto.name && updateCategoryDto.name !== category.name) {
+      const slug = generateSlug(updateCategoryDto.name);
+      Object.assign(category, updateCategoryDto, { slug });
+    } else {
+      Object.assign(category, updateCategoryDto);
+    }
+    
     return this.categoryRepository.save(category);
   }
 
   async getCategoryById(id: string): Promise<Category> {
-    const category = await this.categoryRepository.findOne({where: {_id: id}});
+    const category = await this.categoryRepository.findOne({where: {_id: new ObjectId(id)} as any});
     if (!category) {
       throw new RpcException('Category not found');
     }
     return category;
   }
 
+  // service-only method
   async getCategoriesByIds(ids: string[]): Promise<Category[]> {
     const objectIds = ids.map(id => new ObjectId(id));
     const categories = await this.categoryRepository.find({
@@ -59,7 +67,7 @@ export class ProductService {
   }
 
   async getCategoriesBySlug(slug: string) {
-    const category = await this.categoryRepository.findOne({where: {slug}});
+    const category = await this.categoryRepository.findOneBy({slug} as any);
     if (!category) {
       throw new RpcException('Category not found');
     }
@@ -76,12 +84,7 @@ export class ProductService {
 
   async createCategory(createCategoryDto: CreateCategoryDto): Promise<Category> {
 
-    const existingcategory = await this.categoryRepository.findOne({ where: [
-      
-        {name : createCategoryDto.name},
-        {description : createCategoryDto.description}
-
-       ]});
+    const existingcategory = await this.categoryRepository.findOneBy({name: createCategoryDto.name} as any);
 
       if(existingcategory){
         throw new RpcException('Category already exists');
@@ -109,9 +112,7 @@ export class ProductService {
     }
 
     // Check if product with same name already exists
-    const existingProduct = await this.productRepository.findOne({
-      where: { name: createProductDto.name }
-    });
+    const existingProduct = await this.productRepository.findOneBy({name: createProductDto.name} as any);
 
     if (existingProduct) {
       throw new RpcException('Product with this name already exists');
@@ -139,26 +140,70 @@ export class ProductService {
   }
 
   
-  async getAvailableProducts() {
-    throw new Error('Method not implemented.');
+  async getAvailableProducts() : Promise<Product[]> {
+    const products = await this.productRepository.find();
+    if (!products || products.length === 0) {
+      throw new RpcException('No products found');
+    }
+    return products.filter(product => product.isActive);
   }
-  async getProductsBySlug() {
-    throw new Error('Method not implemented.');
+
+  async getProductsBySlug(slug : string): Promise<Product> {
+    const product = await this.productRepository.findOneBy({slug} as any);
+    if (!product) {
+      throw new RpcException('Product not found');
+    }
+    return product;
   }
-  async getProductsByCategory() {
-    throw new Error('Method not implemented.');
+
+  async getProductsByCategory(slug: string) : Promise<Product[]> {
+    const category = await this.categoryRepository.findOneBy({slug} as any);
+    if (!category) {
+      throw new RpcException('Category not found');
+    }
+    const products = await this.productRepository.find({
+      where: {
+        categoryIds: { $in: [new ObjectId(category._id)] } as any,
+        isActive: true
+      }
+    });
+    if (!products || products.length === 0) {
+      throw new RpcException('No products found for this category');
+    }
+    return products;
   }
-  async deleteProduct() {
-    throw new Error('Method not implemented.');
+
+  async deleteProduct(id: string): Promise<Product> {
+    const product  = await this.productRepository.findOne({where: {_id: new ObjectId(id)} as any});
+    if (!product) {
+      throw new RpcException('Product not found');
+    }
+    return this.productRepository.remove(product);
   }
-  async replaceProduct() {
-    throw new Error('Method not implemented.');
+
+  async updateProduct(id: string, updateProductDto: UpdateProductDto): Promise<Product> {
+    const product = await this.productRepository.findOne({where: {_id: new ObjectId(id)} as any});
+    if (!product) {
+      throw new RpcException('Product not found');
+    }
+
+    // If categoryIds are being updated, verify they all exist
+    if (updateProductDto.categoryIds && updateProductDto.categoryIds.length > 0) {
+      await this.getCategoriesByIds(updateProductDto.categoryIds);
+      // Convert to ObjectIds
+      updateProductDto.categoryIds = updateProductDto.categoryIds.map(id => new ObjectId(id)) as any;
+    }
+  
+    Object.assign(product, updateProductDto, { updatedAt: new Date() });
+    return this.productRepository.save(product);
   }
-  async updateProduct() {
-    throw new Error('Method not implemented.');
-  }
-  async getProductById() {
-    throw new Error('Method not implemented.');
+
+  async getProductById(id: string): Promise<Product> {
+    const product = await this.productRepository.findOne({where: {_id: new ObjectId(id)} as any});
+    if (!product) {
+      throw new RpcException('Product not found');
+    }
+    return product;
   }
   
 async getProducts(categoryIds?: string[]) {

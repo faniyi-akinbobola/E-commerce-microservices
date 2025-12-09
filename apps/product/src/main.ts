@@ -11,7 +11,7 @@ async function bootstrap() {
       urls: [process.env.RabbitMQ_URL || 'amqp://localhost:5672'],
       queue: QUEUES.PRODUCT_QUEUE, //remember to create queue in constants.ts
       queueOptions: {
-        durable: false
+        durable: true
       },
     },
   });

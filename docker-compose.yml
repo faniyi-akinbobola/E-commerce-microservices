@@ -13,6 +13,18 @@ services:
     volumes:
       - auth-db-data:/var/lib/postgresql/data
 
+  product-db:
+    image: mongo:7
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: product_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - product-db-data:/data/db
+
   rabbitmq:
     image: rabbitmq:3-management
     restart: always
@@ -70,5 +82,24 @@ services:
     # ports:
     #   - "3002:3002"
 
+  product-service:
+    build:
+      context: .
+      dockerfile: apps/product/Dockerfile
+    environment:
+      MONGODB_URI: mongodb://admin:admin123@product-db:27017/product_db?authSource=admin
+      RabbitMQ_URL: amqp://guest:guest@rabbitmq:5672
+    env_file:
+      - .env
+    depends_on:
+      product-db:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    # Uncomment if you want to expose a port for debugging
+    # ports:
+    #   - "3003:3003"
+
 volumes:
   auth-db-data:
+  product-db-data:

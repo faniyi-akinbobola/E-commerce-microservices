@@ -51,6 +51,12 @@ export class ProductService {
 
   // service-only method
   async getCategoriesByIds(ids: string[]): Promise<Category[]> {
+    // Validate all IDs are valid MongoDB ObjectIds
+    const invalidIds = ids.filter(id => !ObjectId.isValid(id));
+    if (invalidIds.length > 0) {
+      throw new RpcException(`Invalid category ID format: ${invalidIds.join(', ')}`);
+    }
+
     const objectIds = ids.map(id => new ObjectId(id));
     const categories = await this.categoryRepository.find({
       where: {

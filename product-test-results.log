@@ -1,0 +1,411 @@
+[1;33m=== Testing Product Service Routes ===[0m
+
+[1;33mStep 1: Getting admin auth token...[0m
+[0;32m✓ Auth token obtained[0m
+
+[1;33mStep 2: Creating a test category...[0m
+{
+  "statusCode": 500,
+  "timestamp": "2025-12-10T22:54:27.175Z",
+  "path": "/product/createcategory",
+  "message": "Internal server error"
+}
+[1;33mCategory might already exist, fetching existing categories...[0m
+{
+  "statusCode": 200,
+  "timestamp": "2025-12-10T22:54:27.194Z",
+  "data": [
+    {
+      "_id": "69380d5697e644e3cbc77c75",
+      "name": "Electronics",
+      "description": "Electronic devices and accessories",
+      "slug": "electronics",
+      "createdAt": "2025-12-09T11:51:50.754Z"
+    },
+    {
+      "_id": "693813b4afa09fa1fce269b0",
+      "name": "Clothing",
+      "description": "Men, women and children fashion items.",
+      "slug": "clothing",
+      "createdAt": "2025-12-09T12:19:00.147Z"
+    },
+    {
+      "_id": "69385420afa09fa1fce269b3",
+      "name": "Test Electronics",
+      "description": "Electronics for inventory testing",
+      "slug": "test-electronics",
+      "createdAt": "2025-12-09T16:53:52.951Z"
+    }
+  ]
+}
+jq: error (at <stdin>:1): Cannot index object with number
+[0;32m✓ Using existing category ID: [0m
+
+[1;33mStep 3: Getting all categories...[0m
+{
+  "statusCode": 200,
+  "timestamp": "2025-12-10T22:54:27.221Z",
+  "data": [
+    {
+      "_id": "69380d5697e644e3cbc77c75",
+      "name": "Electronics",
+      "description": "Electronic devices and accessories",
+      "slug": "electronics",
+      "createdAt": "2025-12-09T11:51:50.754Z"
+    },
+    {
+      "_id": "693813b4afa09fa1fce269b0",
+      "name": "Clothing",
+      "description": "Men, women and children fashion items.",
+      "slug": "clothing",
+      "createdAt": "2025-12-09T12:19:00.147Z"
+    },
+    {
+      "_id": "69385420afa09fa1fce269b3",
+      "name": "Test Electronics",
+      "description": "Electronics for inventory testing",
+      "slug": "test-electronics",
+      "createdAt": "2025-12-09T16:53:52.951Z"
+    }
+  ]
+}
+[0;32m✓ Categories retrieved[0m
+
+[1;33mStep 4: Creating a product with valid category ID...[0m
+{
+  "statusCode": 400,
+  "timestamp": "2025-12-10T22:54:27.238Z",
+  "path": "/product/createproduct",
+  "message": {
+    "message": [
+      "each value in categoryIds should not be empty",
+      "each value in categoryIds must be a mongodb id"
+    ],
+    "error": "Bad Request",
+    "statusCode": 400
+  }
+}
+[0;31m✗ Failed to create product[0m
+
+[1;33mStep 5: Testing product creation with INVALID category ID...[0m
+{
+  "statusCode": 400,
+  "timestamp": "2025-12-10T22:54:27.259Z",
+  "path": "/product/createproduct",
+  "message": {
+    "message": [
+      "each value in categoryIds must be a mongodb id"
+    ],
+    "error": "Bad Request",
+    "statusCode": 400
+  }
+}
+[1;33m↑ Should show validation error for invalid MongoDB ID format[0m
+
+[1;33mStep 6: Getting all products...[0m
+{
+  "statusCode": 200,
+  "timestamp": "2025-12-10T22:54:27.271Z",
+  "data": [
+    {
+      "_id": "69380da197e644e3cbc77c77",
+      "name": "Wireless Mouse Pro",
+      "description": "Ergonomic wireless mouse",
+      "price": 29.99,
+      "sku": "SKU-R38CMV-185874",
+      "slug": "wireless-mouse-pro",
+      "stock": 110,
+      "categoryIds": [
+        "69380d5697e644e3cbc77c75"
+      ],
+      "isActive": true,
+      "createdAt": "2025-12-09T11:53:05.875Z",
+      "updatedAt": "2025-12-09T11:53:05.875Z"
+    },
+    {
+      "_id": "6938154aafa09fa1fce269b1",
+      "name": "Slim Fit Denim Jeans",
+      "description": "Durable denim jeans with a modern slim fit.",
+      "price": 69.99,
+      "sku": "SKU-3EKOXL-146725",
+      "slug": "slim-fit-denim-jeans",
+      "stock": 80,
+      "categoryIds": [
+        "693813b4afa09fa1fce269b0"
+      ],
+      "images": [
+        "https://example.com/products/jeans-front.jpg",
+        "https://example.com/products/jeans-back.jpg"
+      ],
+      "brand": "DenimPro",
+      "isActive": true,
+      "createdAt": "2025-12-09T12:25:46.725Z",
+      "updatedAt": "2025-12-09T12:25:46.725Z"
+    },
+    {
+      "_id": "69381579afa09fa1fce269b2",
+      "name": "Classic Cotton T-Shirt",
+      "description": "Soft and breathable cotton T-shirt for everyday wear.",
+      "price": 29.99,
+      "sku": "SKU-NH048K-193737",
+      "slug": "classic-cotton-t-shirt",
+      "stock": 120,
+      "categoryIds": [
+        "693813b4afa09fa1fce269b0"
+      ],
+      "images": [
+        "https://example.com/products/tshirt-front.jpg",
+        "https://example.com/products/tshirt-back.jpg"
+      ],
+      "brand": "UrbanWear",
+      "isActive": true,
+      "createdAt": "2025-12-09T12:26:33.737Z",
+      "updatedAt": "2025-12-09T12:26:33.737Z"
+    },
+    {
+      "_id": "69385420afa09fa1fce269b4",
+      "name": "Test Laptop",
+      "description": "A laptop for inventory testing",
+      "price": 999.99,
+      "sku": "SKU-Z6PO8S-232981",
+      "slug": "test-laptop",
+      "stock": 75,
+      "categoryIds": [
+        "69385420afa09fa1fce269b3"
+      ],
+      "brand": "TestBrand",
+      "isActive": true,
+      "createdAt": "2025-12-09T16:53:52.981Z",
+      "updatedAt": "2025-12-09T16:53:52.981Z"
+    },
+    {
+      "_id": "6939f88a84e64b874bab32a1",
+      "name": "Test iPhone 16",
+      "description": "Latest iPhone model",
+      "price": 1099.99,
+      "sku": "SKU-UUQ22S-858941",
+      "slug": "test-iphone-16",
+      "stock": 50,
+      "categoryIds": [
+        "69380d5697e644e3cbc77c75"
+      ],
+      "brand": "Apple",
+      "isActive": true,
+      "createdAt": "2025-12-10T22:47:38.942Z",
+      "updatedAt": "2025-12-10T22:47:38.942Z"
+    },
+    {
+      "_id": "6939f90af857e575c0afc1ba",
+      "name": "Samsung Galaxy S24",
+      "description": "Latest Samsung flagship",
+      "price": 899.99,
+      "sku": "SKU-Q93H93-986390",
+      "slug": "samsung-galaxy-s24",
+      "stock": 30,
+      "categoryIds": [
+        "69380d5697e644e3cbc77c75"
+      ],
+      "brand": "Samsung",
+      "isActive": true,
+      "createdAt": "2025-12-10T22:49:46.391Z",
+      "updatedAt": "2025-12-10T22:49:46.391Z"
+    }
+  ]
+}
+[0;32m✓ Products retrieved[0m
+
+[1;33mStep 8: Getting available products...[0m
+{
+  "statusCode": 200,
+  "timestamp": "2025-12-10T22:54:27.283Z",
+  "data": [
+    {
+      "_id": "69380da197e644e3cbc77c77",
+      "name": "Wireless Mouse Pro",
+      "description": "Ergonomic wireless mouse",
+      "price": 29.99,
+      "sku": "SKU-R38CMV-185874",
+      "slug": "wireless-mouse-pro",
+      "stock": 110,
+      "categoryIds": [
+        "69380d5697e644e3cbc77c75"
+      ],
+      "isActive": true,
+      "createdAt": "2025-12-09T11:53:05.875Z",
+      "updatedAt": "2025-12-09T11:53:05.875Z"
+    },
+    {
+      "_id": "6938154aafa09fa1fce269b1",
+      "name": "Slim Fit Denim Jeans",
+      "description": "Durable denim jeans with a modern slim fit.",
+      "price": 69.99,
+      "sku": "SKU-3EKOXL-146725",
+      "slug": "slim-fit-denim-jeans",
+      "stock": 80,
+      "categoryIds": [
+        "693813b4afa09fa1fce269b0"
+      ],
+      "images": [
+        "https://example.com/products/jeans-front.jpg",
+        "https://example.com/products/jeans-back.jpg"
+      ],
+      "brand": "DenimPro",
+      "isActive": true,
+      "createdAt": "2025-12-09T12:25:46.725Z",
+      "updatedAt": "2025-12-09T12:25:46.725Z"
+    },
+    {
+      "_id": "69381579afa09fa1fce269b2",
+      "name": "Classic Cotton T-Shirt",
+      "description": "Soft and breathable cotton T-shirt for everyday wear.",
+      "price": 29.99,
+      "sku": "SKU-NH048K-193737",
+      "slug": "classic-cotton-t-shirt",
+      "stock": 120,
+      "categoryIds": [
+        "693813b4afa09fa1fce269b0"
+      ],
+      "images": [
+        "https://example.com/products/tshirt-front.jpg",
+        "https://example.com/products/tshirt-back.jpg"
+      ],
+      "brand": "UrbanWear",
+      "isActive": true,
+      "createdAt": "2025-12-09T12:26:33.737Z",
+      "updatedAt": "2025-12-09T12:26:33.737Z"
+    },
+    {
+      "_id": "69385420afa09fa1fce269b4",
+      "name": "Test Laptop",
+      "description": "A laptop for inventory testing",
+      "price": 999.99,
+      "sku": "SKU-Z6PO8S-232981",
+      "slug": "test-laptop",
+      "stock": 75,
+      "categoryIds": [
+        "69385420afa09fa1fce269b3"
+      ],
+      "brand": "TestBrand",
+      "isActive": true,
+      "createdAt": "2025-12-09T16:53:52.981Z",
+      "updatedAt": "2025-12-09T16:53:52.981Z"
+    },
+    {
+      "_id": "6939f88a84e64b874bab32a1",
+      "name": "Test iPhone 16",
+      "description": "Latest iPhone model",
+      "price": 1099.99,
+      "sku": "SKU-UUQ22S-858941",
+      "slug": "test-iphone-16",
+      "stock": 50,
+      "categoryIds": [
+        "69380d5697e644e3cbc77c75"
+      ],
+      "brand": "Apple",
+      "isActive": true,
+      "createdAt": "2025-12-10T22:47:38.942Z",
+      "updatedAt": "2025-12-10T22:47:38.942Z"
+    },
+    {
+      "_id": "6939f90af857e575c0afc1ba",
+      "name": "Samsung Galaxy S24",
+      "description": "Latest Samsung flagship",
+      "price": 899.99,
+      "sku": "SKU-Q93H93-986390",
+      "slug": "samsung-galaxy-s24",
+      "stock": 30,
+      "categoryIds": [
+        "69380d5697e644e3cbc77c75"
+      ],
+      "brand": "Samsung",
+      "isActive": true,
+      "createdAt": "2025-12-10T22:49:46.391Z",
+      "updatedAt": "2025-12-10T22:49:46.391Z"
+    }
+  ]
+}
+[0;32m✓ Available products retrieved[0m
+
+[1;33mStep 10: Getting products by category slug...[0m
+{
+  "statusCode": 200,
+  "timestamp": "2025-12-10T22:54:27.295Z",
+  "data": [
+    {
+      "_id": "69380da197e644e3cbc77c77",
+      "name": "Wireless Mouse Pro",
+      "description": "Ergonomic wireless mouse",
+      "price": 29.99,
+      "sku": "SKU-R38CMV-185874",
+      "slug": "wireless-mouse-pro",
+      "stock": 110,
+      "categoryIds": [
+        "69380d5697e644e3cbc77c75"
+      ],
+      "isActive": true,
+      "createdAt": "2025-12-09T11:53:05.875Z",
+      "updatedAt": "2025-12-09T11:53:05.875Z"
+    },
+    {
+      "_id": "6939f88a84e64b874bab32a1",
+      "name": "Test iPhone 16",
+      "description": "Latest iPhone model",
+      "price": 1099.99,
+      "sku": "SKU-UUQ22S-858941",
+      "slug": "test-iphone-16",
+      "stock": 50,
+      "categoryIds": [
+        "69380d5697e644e3cbc77c75"
+      ],
+      "brand": "Apple",
+      "isActive": true,
+      "createdAt": "2025-12-10T22:47:38.942Z",
+      "updatedAt": "2025-12-10T22:47:38.942Z"
+    },
+    {
+      "_id": "6939f90af857e575c0afc1ba",
+      "name": "Samsung Galaxy S24",
+      "description": "Latest Samsung flagship",
+      "price": 899.99,
+      "sku": "SKU-Q93H93-986390",
+      "slug": "samsung-galaxy-s24",
+      "stock": 30,
+      "categoryIds": [
+        "69380d5697e644e3cbc77c75"
+      ],
+      "brand": "Samsung",
+      "isActive": true,
+      "createdAt": "2025-12-10T22:49:46.391Z",
+      "updatedAt": "2025-12-10T22:49:46.391Z"
+    }
+  ]
+}
+[0;32m✓ Products by category retrieved[0m
+
+[1;33mStep 11: Getting category by ID...[0m
+{
+  "statusCode": 404,
+  "timestamp": "2025-12-10T22:54:27.305Z",
+  "path": "/product/getcategory/",
+  "message": {
+    "message": "Cannot GET /product/getcategory/",
+    "error": "Not Found",
+    "statusCode": 404
+  }
+}
+[0;32m✓ Category retrieved by ID[0m
+
+[1;33mStep 12: Updating category...[0m
+{
+  "statusCode": 404,
+  "timestamp": "2025-12-10T22:54:27.313Z",
+  "path": "/product/updatecategory",
+  "message": {
+    "message": "Cannot PATCH /product/updatecategory",
+    "error": "Not Found",
+    "statusCode": 404
+  }
+}
+[0;32m✓ Category updated[0m
+
+[0;32m=== All Product Service Routes Tested Successfully ===[0m

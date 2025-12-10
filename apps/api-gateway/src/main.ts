@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as cookieParser from 'cookie-parser';
 import { RequestLoggerMiddleware } from '@apps/common';
+import { ValidationPipe } from '@nestjs/common';
 
 
 // Load .env file manually
@@ -24,6 +25,13 @@ if (fs.existsSync(envPath)) {
 
 async function bootstrap() {
   const app = await NestFactory.create(ApiGatewayModule);
+  
+  // Enable global validation
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  }));
   
   // Enable CORS
   app.enableCors({

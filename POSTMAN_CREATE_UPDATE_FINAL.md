@@ -9,11 +9,13 @@ All routes require authentication. Follow these steps:
 **POST** `http://localhost:3000/auth/login`
 
 **Headers:**
+
 ```
 Content-Type: application/json
 ```
 
 **Body:**
+
 ```json
 {
   "email": "user1@example.com",
@@ -22,6 +24,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "statusCode": 200,
@@ -40,6 +43,7 @@ Copy the `accessToken` value.
 For ALL inventory requests below, add this header:
 
 **Headers:**
+
 ```
 Authorization: Bearer <paste-your-token-here>
 Content-Type: application/json
@@ -52,27 +56,32 @@ Content-Type: application/json
 **POST** `http://localhost:3000/inventory/createinventory`
 
 ### ⚠️ IMPORTANT:
+
 - **Inventory already exists for product `69380da197e644e3cbc77c77`**
 - You CANNOT create inventory twice for the same product
 - Use a different productId that doesn't have inventory yet
 - If you get a 500 error, the product already has inventory
 
 ### Headers:
+
 ```
 Authorization: Bearer <your-token>
 Content-Type: application/json
 ```
 
 ### Body (Example 1 - ❌ WILL FAIL - Inventory exists):
+
 ```json
 {
   "productId": "69380da197e644e3cbc77c77",
   "quantity": 100
 }
 ```
+
 **Note:** This will fail with 500 error because inventory already exists for this product!
 
 ### Body (Example 2 - ✅ WILL WORK - New Product):
+
 ```json
 {
   "productId": "777777777777777777777777",
@@ -81,6 +90,7 @@ Content-Type: application/json
 ```
 
 ### Expected Response (Success):
+
 ```json
 {
   "statusCode": 201,
@@ -98,6 +108,7 @@ Content-Type: application/json
 ```
 
 ### Expected Response (Error - Inventory Exists):
+
 ```json
 {
   "statusCode": 500,
@@ -106,9 +117,11 @@ Content-Type: application/json
   "message": "Internal server error"
 }
 ```
+
 **This happens when inventory already exists for the productId!**
 
 ### Notes:
+
 - ✅ Each product can only have ONE inventory record
 - ✅ If inventory already exists for a product, you'll get an error
 - ✅ `productId` must be a valid 24-character MongoDB ObjectId format
@@ -121,12 +134,14 @@ Content-Type: application/json
 **PATCH** `http://localhost:3000/inventory/updateinventory/{productId}`
 
 ### Headers:
+
 ```
 Authorization: Bearer <your-token>
 Content-Type: application/json
 ```
 
 ### URL Parameter:
+
 Replace `{productId}` with the actual product ID
 
 ### Example 1: Update Quantity Only
@@ -134,6 +149,7 @@ Replace `{productId}` with the actual product ID
 **PATCH** `http://localhost:3000/inventory/updateinventory/69380da197e644e3cbc77c77`
 
 **Body:**
+
 ```json
 {
   "quantity": 500
@@ -145,6 +161,7 @@ Replace `{productId}` with the actual product ID
 **PATCH** `http://localhost:3000/inventory/updateinventory/69380da197e644e3cbc77c77`
 
 **Body:**
+
 ```json
 {
   "quantity": 120,
@@ -157,6 +174,7 @@ Replace `{productId}` with the actual product ID
 **PATCH** `http://localhost:3000/inventory/updateinventory/69380da197e644e3cbc77c77`
 
 **Body:**
+
 ```json
 {
   "isActive": true
@@ -164,6 +182,7 @@ Replace `{productId}` with the actual product ID
 ```
 
 ### Expected Response (Success):
+
 ```json
 {
   "statusCode": 200,
@@ -181,6 +200,7 @@ Replace `{productId}` with the actual product ID
 ```
 
 ### Notes:
+
 - ✅ Use `productId` in the URL (not inventory ID)
 - ✅ `quantity` is optional - only send if you want to update it
 - ✅ `isActive` is optional - only send if you want to update it
@@ -191,6 +211,7 @@ Replace `{productId}` with the actual product ID
 ## 🔍 TESTING CHECKLIST
 
 ### For CREATE INVENTORY:
+
 - [ ] Get auth token first
 - [ ] Add `Authorization: Bearer <token>` header
 - [ ] Add `Content-Type: application/json` header
@@ -199,6 +220,7 @@ Replace `{productId}` with the actual product ID
 - [ ] Expect 201 Created status
 
 ### For UPDATE INVENTORY:
+
 - [ ] Get auth token first
 - [ ] Add `Authorization: Bearer <token>` header
 - [ ] Add `Content-Type: application/json` header
@@ -211,37 +233,45 @@ Replace `{productId}` with the actual product ID
 ## 🎯 QUICK TEST PAYLOADS
 
 ### ⚠️ Your Product Already Has Inventory!
+
 Product `69380da197e644e3cbc77c77` already has inventory, so CREATE will fail.
 Use UPDATE instead, or create inventory for a different product.
 
 ### Test 1: ❌ Create Inventory (WILL FAIL - Already Exists)
+
 ```json
 {
   "productId": "69380da197e644e3cbc77c77",
   "quantity": 100
 }
 ```
+
 **Expected:** 500 error because inventory exists
 
 ### Test 2: ✅ Create Inventory for New Product (WILL WORK)
+
 ```json
 {
   "productId": "777777777777777777777777",
   "quantity": 100
 }
 ```
+
 **Expected:** 201 Created
 
 ### Test 3: ✅ Update Existing Inventory to 200 (WILL WORK)
+
 ```json
 {
   "quantity": 200
 }
 ```
+
 URL: `http://localhost:3000/inventory/updateinventory/69380da197e644e3cbc77c77`
 **Expected:** 200 OK
 
 ### Test 3: Create New Product Inventory
+
 ```json
 {
   "productId": "888888888888888888888888",
@@ -250,12 +280,14 @@ URL: `http://localhost:3000/inventory/updateinventory/69380da197e644e3cbc77c77`
 ```
 
 ### Test 4: Update and Deactivate
+
 ```json
 {
   "quantity": 150,
   "isActive": false
 }
 ```
+
 URL: `http://localhost:3000/inventory/updateinventory/888888888888888888888888`
 
 ---

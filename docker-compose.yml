@@ -53,6 +53,19 @@ services:
       retries: 5
       start_period: 30s
 
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   auth-service:
     build:
       context: .
@@ -137,7 +150,26 @@ services:
     # ports:
     #   - "3004:3004"
 
+  cart-service:
+    build:
+      context: .
+      dockerfile: apps/cart/Dockerfile
+    environment:
+      REDIS_URL: redis://redis:6379
+      RabbitMQ_URL: amqp://guest:guest@rabbitmq:5672
+    env_file:
+      - .env
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    # Uncomment if you want to expose a port for debugging
+    # ports:
+    #   - "3005:3005"
+
 volumes:
   auth-db-data:
   product-db-data:
   inventory-db-data:
+  redis-data:

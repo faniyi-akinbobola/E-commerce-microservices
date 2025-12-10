@@ -17,3 +17,6 @@ export * from './add-stock.dto';
 export * from './reduce-stock.dto';
 export * from './reserve-stock.dto';
 export * from './release-stock.dto';
+export * from './add-to-cart.dto';
+export * from './update-cart-quantity.dto';
+export * from './remove-cart-item.dto';

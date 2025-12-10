@@ -3,6 +3,7 @@
 All three problematic routes are now fixed and tested!
 
 ## Product ID to Use
+
 ```
 69380da197e644e3cbc77c77
 ```
@@ -10,9 +11,11 @@ All three problematic routes are now fixed and tested!
 ---
 
 ## 1. ✅ Create Inventory
+
 **POST** `http://localhost:3000/inventory/createinventory`
 
 **Body:**
+
 ```json
 {
   "productId": "69380da197e644e3cbc77c77",
@@ -25,9 +28,11 @@ All three problematic routes are now fixed and tested!
 ---
 
 ## 2. ✅ Update Inventory (FIXED)
+
 **PATCH** `http://localhost:3000/inventory/updateinventory/69380da197e644e3cbc77c77`
 
 **Body:**
+
 ```json
 {
   "quantity": 150
@@ -35,6 +40,7 @@ All three problematic routes are now fixed and tested!
 ```
 
 **Optional fields:**
+
 ```json
 {
   "quantity": 150,
@@ -43,6 +49,7 @@ All three problematic routes are now fixed and tested!
 ```
 
 **Changes Made:**
+
 - ✅ Route now uses `productId` in URL instead of inventory `id`
 - ✅ Service finds inventory by `productId` instead of `id`
 - ✅ No need to send `productId` in body anymore
@@ -50,9 +57,11 @@ All three problematic routes are now fixed and tested!
 ---
 
 ## 3. ✅ Release Stock (FIXED)
+
 **POST** `http://localhost:3000/inventory/releasestock`
 
 **Body:**
+
 ```json
 {
   "productId": "69380da197e644e3cbc77c77",
@@ -61,6 +70,7 @@ All three problematic routes are now fixed and tested!
 ```
 
 **Optional with orderId:**
+
 ```json
 {
   "productId": "69380da197e644e3cbc77c77",
@@ -70,6 +80,7 @@ All three problematic routes are now fixed and tested!
 ```
 
 **Changes Made:**
+
 - ✅ `orderId` is now **optional** (was required before)
 - ✅ You can release stock without providing an orderId
 
@@ -78,7 +89,9 @@ All three problematic routes are now fixed and tested!
 ## Other Working Routes (For Reference)
 
 ### 4. Add Stock
+
 **POST** `http://localhost:3000/inventory/addstock`
+
 ```json
 {
   "productId": "69380da197e644e3cbc77c77",
@@ -87,7 +100,9 @@ All three problematic routes are now fixed and tested!
 ```
 
 ### 5. Reduce Stock
+
 **POST** `http://localhost:3000/inventory/reducestock`
+
 ```json
 {
   "productId": "69380da197e644e3cbc77c77",
@@ -96,7 +111,9 @@ All three problematic routes are now fixed and tested!
 ```
 
 ### 6. Reserve Stock
+
 **POST** `http://localhost:3000/inventory/reservestock`
+
 ```json
 {
   "productId": "69380da197e644e3cbc77c77",
@@ -105,9 +122,11 @@ All three problematic routes are now fixed and tested!
 ```
 
 ### 7. Get Inventory by Product
+
 **GET** `http://localhost:3000/inventory/getinventoryforproduct/69380da197e644e3cbc77c77`
 
 ### 8. Get All Available Products
+
 **GET** `http://localhost:3000/inventory/getavailableproducts`
 
 ---
@@ -116,7 +135,7 @@ All three problematic routes are now fixed and tested!
 
 ```
 ✅ PASSED: Update Inventory
-✅ PASSED: Release Stock  
+✅ PASSED: Release Stock
 ✅ PASSED: Create Inventory
 
 All routes tested and working!

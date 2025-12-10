@@ -9,9 +9,9 @@ async function bootstrap() {
     transport: Transport.RMQ,
     options: {
       urls: [process.env.RabbitMQ_URL || 'amqp://localhost:5672'],
-      queue: QUEUES.CART_QUEUE, //remember to create queue in constants.ts
+      queue: QUEUES.CART_QUEUE,
       queueOptions: {
-        durable: false
+        durable: true
       },
     },
   });

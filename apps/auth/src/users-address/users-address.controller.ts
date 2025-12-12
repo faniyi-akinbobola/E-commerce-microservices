@@ -34,7 +34,10 @@ export class UsersAddressController {
 
   @MessagePattern({ cmd: 'get_user_address_by_id' })
   getUserAddressById(@Payload() data: { id: string; userId: string }) {
-    return this.usersAddressService.findOne(data.id, data.userId);
+    console.log('[Auth/UsersAddress] 📥 Received get_user_address_by_id request:', JSON.stringify(data));
+    const result = this.usersAddressService.findOne(data.id, data.userId);
+    console.log('[Auth/UsersAddress] 📤 Returning address result');
+    return result;
   }
 
 }

@@ -1,0 +1,18 @@
+[0;34m========================================[0m
+[0;34m  E-COMMERCE ORDER SERVICE TEST SUITE  [0m
+[0;34m========================================[0m
+
+
+[1;33m========== STEP 1: User Authentication ==========[0m
+Creating new user...
+Signup Response: {"statusCode":201,"timestamp":"2025-12-11T13:12:28.042Z","data":{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMWQzMTA3Mi0zYzllLTQzOWItODQ5My1mZjE3ZTUwNGUwNzEiLCJ1c2VybmFtZSI6Im9yZGVydXNlcjE3NjU0NTg3NDciLCJyb2xlIjoiQ1VTVE9NRVIiLCJpYXQiOjE3NjU0NTg3NDgsImV4cCI6MTc2NTQ2MjM0OH0.h_64uAoc-yaM2ShQEvzwHVt21nIocBQj_K1OZISphoY","refreshToken":"0a41fc6cfe0b58e1da02c4abae1e7d083d122b26ced1f1949af3178def6e2612","user":{"id":"01d31072-3c9e-439b-8493-ff17e504e071","username":"orderuser1765458747","email":"ordertest1765458747@test.com","role":"CUSTOMER"}}}
+[0;32mUser created with ID: 01d31072-3c9e-439b-8493-ff17e504e071[0m
+
+Logging in...
+Login Response: {"statusCode":201,"timestamp":"2025-12-11T13:12:28.118Z","data":{"accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMWQzMTA3Mi0zYzllLTQzOWItODQ5My1mZjE3ZTUwNGUwNzEiLCJlbWFpbCI6Im9yZGVydGVzdDE3NjU0NTg3NDdAdGVzdC5jb20iLCJyb2xlIjoiQ1VTVE9NRVIiLCJpYXQiOjE3NjU0NTg3NDgsImV4cCI6MTc2NTQ2MjM0OH0.crmg5Y279Kt2hSARBONRJtrdvu9C7SJ-wQV6WQdBxWs","refreshToken":"1cba47ad75135edbaf9e65a50d7b2dc7a129ad680a6bd73559f6e840d30ade6d","user":{"id":"01d31072-3c9e-439b-8493-ff17e504e071","username":"orderuser1765458747","email":"ordertest1765458747@test.com","role":"CUSTOMER"}}}
+[0;32m✓ Authenticated successfully[0m
+
+[1;33m========== STEP 2: Create Shipping Address ==========[0m
+Creating user address...
+Address Response: {"statusCode":201,"timestamp":"2025-12-11T13:12:28.154Z","data":{"fullName":"John Doe","phone":"+1234567890","street":"123 Main Street","city":"New York","state":"NY","country":"USA","postalCode":"10001","isDefault":true,"user":{"id":"01d31072-3c9e-439b-8493-ff17e504e071","username":"orderuser1765458747","email":"ordertest1765458747@test.com","password":"$2b$10$6jWRUQ5/ewKz01FXEXHYv.4ARrAwbGON7rFqeOSkvLiy20P0RqtEi","resetToken":null,"refreshToken":"1cba47ad75135edbaf9e65a50d7b2dc7a129ad680a6bd73559f6e840d30ade6d","resetTokenExpires":null,"role":"CUSTOMER","createdAt":"2025-12-11T13:12:28.030Z","updatedAt":"2025-12-11T13:12:28.116Z"},"id":"78b4049f-887a-4864-81eb-4a29affb5b0e","createdAt":"2025-12-11T13:12:28.150Z","updatedAt":"2025-12-11T13:12:28.150Z"}}
+[0;31mFailed to create address[0m

@@ -29,6 +29,27 @@ interface PasswordResetSuccessPayload {
   name: string;
 }
 
+interface OrderCreatedPayload {
+  orderId: string;
+  userId: string;
+  totalPrice: number;
+  items: number;
+}
+
+interface OrderPaidPayload {
+  orderId: string;
+  userId: string;
+  amount: number;
+  transactionId: string;
+}
+
+interface OrderPaymentFailedPayload {
+  orderId: string;
+  userId: string;
+  amount: number;
+  reason: string;
+}
+
 @Injectable()
 export class NotificationsService {
 
@@ -155,6 +176,92 @@ export class NotificationsService {
       return { success: true };
     } catch (error) {
       this.logger.error(`Failed to send password reset success email to ${email}`, error.stack);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /** ===========================
+   *  SEND ORDER CREATED EMAIL
+   *  =========================== **/
+  async sendOrderCreatedEmail(data: OrderCreatedPayload) {
+    const { orderId, userId, totalPrice, items } = data;
+
+    try {
+      // In a real app, you'd fetch user email from userId
+      // For now, we'll log it
+      this.logger.log(`Order created notification - OrderID: ${orderId}, UserID: ${userId}, Total: $${totalPrice}, Items: ${items}`);
+      
+      // TODO: Fetch user email and send actual email
+      // await this.mailerService.sendMail({
+      //   to: userEmail,
+      //   subject: 'Order Confirmation 🛍️',
+      //   template: './order/order-created',
+      //   context: {
+      //     orderId,
+      //     totalPrice,
+      //     items,
+      //   },
+      // });
+
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`Failed to send order created email for order ${orderId}`, error.stack);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /** ===========================
+   *  SEND ORDER PAID EMAIL
+   *  =========================== **/
+  async sendOrderPaidEmail(data: OrderPaidPayload) {
+    const { orderId, userId, amount, transactionId } = data;
+
+    try {
+      this.logger.log(`Order paid notification - OrderID: ${orderId}, UserID: ${userId}, Amount: $${amount}, Transaction: ${transactionId}`);
+      
+      // TODO: Fetch user email and send actual email
+      // await this.mailerService.sendMail({
+      //   to: userEmail,
+      //   subject: 'Payment Successful ✅',
+      //   template: './order/order-paid',
+      //   context: {
+      //     orderId,
+      //     amount,
+      //     transactionId,
+      //   },
+      // });
+
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`Failed to send order paid email for order ${orderId}`, error.stack);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /** ===========================
+   *  SEND ORDER PAYMENT FAILED EMAIL
+   *  =========================== **/
+  async sendOrderPaymentFailedEmail(data: OrderPaymentFailedPayload) {
+    const { orderId, userId, amount, reason } = data;
+
+    try {
+      this.logger.log(`Order payment failed notification - OrderID: ${orderId}, UserID: ${userId}, Amount: $${amount}, Reason: ${reason}`);
+      
+      // TODO: Fetch user email and send actual email
+      // await this.mailerService.sendMail({
+      //   to: userEmail,
+      //   subject: 'Payment Failed ❌',
+      //   template: './order/order-payment-failed',
+      //   context: {
+      //     orderId,
+      //     amount,
+      //     reason,
+      //   },
+      // });
+
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`Failed to send payment failed email for order ${orderId}`, error.stack);
       return { success: false, error: error.message };
     }
   }

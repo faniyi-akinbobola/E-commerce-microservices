@@ -31,4 +31,19 @@ export class NotificationsController {
     return this.notificationsService.sendPasswordResetSuccessEmail(data);
   }
 
+  @EventPattern('order_created')
+  async handleOrderCreated(@Payload() data: any) {
+    return this.notificationsService.sendOrderCreatedEmail(data);
+  }
+
+  @EventPattern('order_paid')
+  async handleOrderPaid(@Payload() data: any) {
+    return this.notificationsService.sendOrderPaidEmail(data);
+  }
+
+  @EventPattern('order_payment_failed')
+  async handleOrderPaymentFailed(@Payload() data: any) {
+    return this.notificationsService.sendOrderPaymentFailedEmail(data);
+  }
+
 }

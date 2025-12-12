@@ -37,6 +37,18 @@ services:
     volumes:
       - inventory-db-data:/var/lib/postgresql/data
 
+  order-db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: order_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - order-db-data:/var/lib/postgresql/data
+
   rabbitmq:
     image: rabbitmq:3-management
     restart: always
@@ -72,6 +84,10 @@ services:
       dockerfile: apps/auth/Dockerfile
     env_file:
       - .env
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      AUTH_QUEUE: auth_queue
+      TIMEOUT_MS: 5000
     depends_on:
       auth-db:
         condition: service_started
@@ -168,8 +184,36 @@ services:
     # ports:
     #   - "3005:3005"
 
+  order-service:
+    build:
+      context: .
+      dockerfile: apps/order/Dockerfile
+    environment:
+      DB_HOST: order-db
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_DATABASE: order_db
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      AUTH_QUEUE: auth_queue
+      CART_QUEUE: cart_queue
+      PRODUCT_QUEUE: product_queue
+      NOTIFICATIONS_QUEUE: notifications_queue
+      ORDER_QUEUE: order_queue
+    env_file:
+      - .env
+    depends_on:
+      order-db:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    # Uncomment if you want to expose a port for debugging
+    # ports:
+    #   - "3006:3006"
+
 volumes:
   auth-db-data:
   product-db-data:
   inventory-db-data:
+  order-db-data:
   redis-data:

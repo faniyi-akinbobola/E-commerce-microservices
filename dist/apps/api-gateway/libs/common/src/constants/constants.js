@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.QUEUES = void 0;
+exports.QUEUES = {
+    ORDER_QUEUE: 'order_queue',
+    PAYMENT_QUEUE: 'payment_queue',
+    INVENTORY_QUEUE: 'inventory_queue',
+    NOTIFICATIONS_QUEUE: 'notifications_queue',
+    CART_QUEUE: 'cart_queue',
+    AUTH_QUEUE: 'auth_queue',
+    PRODUCT_QUEUE: 'product_queue',
+    SHIPPING_QUEUE: 'shipping_queue',
+};
+//# sourceMappingURL=constants.js.map

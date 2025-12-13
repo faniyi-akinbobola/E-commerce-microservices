@@ -26,3 +26,4 @@ export * from './create-order.dto';
 export * from './update-order-status.dto';
 export * from './cancel-order.dto';
 export * from './add-payment-record.dto';
+export * from './create-charge.dto';

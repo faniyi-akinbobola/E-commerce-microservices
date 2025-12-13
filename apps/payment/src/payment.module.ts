@@ -1,27 +1,19 @@
 import { Module } from '@nestjs/common';
 import { PaymentController } from './payment.controller';
 import { PaymentService } from './payment.service';
-import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { QUEUES } from '@apps/common';
+import * as joi from 'joi';
+
 
 @Module({
-  imports: [
-        ClientsModule.registerAsync([
-      {
-        name: 'NOTIFICATION_SERVICE',
-        useFactory: (config: ConfigService) => ({
-          transport: Transport.RMQ,
-          options: {
-            urls: [config.get<string>('RABBITMQ_URL')],
-            queue: config.get<string>(QUEUES.NOTIFICATIONS_QUEUE),
-            queueOptions: { durable: true },
-          },
-        }),
-        inject: [ConfigService],
-        imports: [ConfigModule],
-      },
-    ])
+  imports: [ConfigModule.forRoot({
+    isGlobal: true,
+    envFilePath: './apps/payment/.env',
+    validationSchema: joi.object({
+      STRIPE_SECRET_KEY: joi.string().required(),
+      RABBITMQ_URL: joi.string().required(),
+    })
+  })
   ],
   controllers: [PaymentController],
   providers: [PaymentService],

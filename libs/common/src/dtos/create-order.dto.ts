@@ -1,4 +1,6 @@
-import { IsArray, IsNotEmpty, IsString, IsNumber, IsOptional } from 'class-validator';
+import { IsArray, IsNotEmpty, IsString, IsNumber, IsOptional, IsDefined, ValidateNested, IsNotEmptyObject } from 'class-validator';
+import { CreateChargeDto } from './create-charge.dto';
+import { Type } from 'class-transformer';
 
 export class CreateOrderDto {
   @IsString()
@@ -15,4 +17,11 @@ export class CreateOrderDto {
   @IsString()
   @IsNotEmpty()
   shippingAddressId: string;
+
+
+  @IsDefined()
+  @ValidateNested()
+  @IsNotEmptyObject()
+  @Type(()=> CreateChargeDto)
+  charge: CreateChargeDto;;
 }

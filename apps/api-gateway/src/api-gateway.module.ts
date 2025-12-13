@@ -108,21 +108,6 @@ import { JwtBlacklistGuard } from './guards/jwt-blacklist.guard';
           },
         }),
       },
-
-      {
-        name:'PAYMENT_SERVICE',
-        imports: [ConfigModule],
-        inject: [ConfigService],
-        useFactory: (config: ConfigService) => ({
-          transport: Transport.RMQ,
-          options: {
-            urls: [config.get<string>('RABBITMQ_URL') as string],
-            queue: QUEUES.PAYMENT_QUEUE, 
-            queueOptions: { durable: true },
-          },
-        }),
-      },
-
       {
         name:'SHIPPING_SERVICE',
         imports: [ConfigModule],

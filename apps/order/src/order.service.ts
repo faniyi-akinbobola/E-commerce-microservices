@@ -7,6 +7,7 @@ import { CreateOrderDto, UpdateOrderStatusDto, CancelOrderDto, AddPaymentRecordD
 import { RpcException, ClientProxy } from '@nestjs/microservices';
 import { lastValueFrom, timeout } from 'rxjs';
 
+
 @Injectable()
 export class OrderService {
   constructor(
@@ -16,6 +17,7 @@ export class OrderService {
     @Inject('CART_SERVICE') private readonly cartClient: ClientProxy,
     @Inject('PRODUCT_SERVICE') private readonly productClient: ClientProxy,
     @Inject('NOTIFICATION_SERVICE') private readonly notificationClient: ClientProxy,
+    @Inject('PAYMENT_SERVICE') private readonly paymentClient: ClientProxy,
   ){}
 
 
@@ -86,7 +88,7 @@ export class OrderService {
     try {
       console.log('[OrderService] Creating order for user:', userId, 'DTO:', createOrderDto);
       
-      // 1. Request the user's shipping address from Auth Service
+      // 2. Request the user's shipping address from Auth Service
       console.log('[OrderService] Calling auth service to get address with params:', { id: createOrderDto.shippingAddressId, userId });
       
       let address;
@@ -105,10 +107,28 @@ export class OrderService {
         if (!address) {
           throw new RpcException('Shipping address not found for user');
         }
+        
+        // If userId is undefined, use the user ID from the address
+        if (!userId && address.user && address.user.id) {
+          userId = address.user.id;
+          console.log('[OrderService] Using userId from address:', userId);
+        }
       } catch (err) {
         console.error('[OrderService] Auth service call error:', err.message, err.stack);
         throw new RpcException(`Failed to get address: ${err.message}`);
       }
+      
+      // 1. Get user details for email notification
+      console.log('[OrderService] Fetching user data for notifications');
+      const user = await lastValueFrom(
+        this.authClient.send({ cmd: 'get_user_by_id' }, { id: userId })
+      );
+      
+      if (!user) {
+        throw new RpcException('User not found');
+      }
+      
+      console.log('[OrderService] User retrieved:', user.email, user.username);
 
       // 2. Build shippingAddress snapshot
       const shippingAddressSnapshot = {
@@ -171,7 +191,41 @@ export class OrderService {
 
       console.log('[OrderService] Totals - subtotal:', subtotal, 'tax:', tax, 'total:', totalPrice);
 
-      // 6. Create Order with status = PENDING
+      // process payment 
+      let paymentResult;
+      try {
+        // Convert amount to cents/kobo (smallest currency unit) as integer
+        const amountInCents = Math.round(totalPrice * 100);
+        
+        paymentResult = await lastValueFrom(
+          this.paymentClient.send(
+            { cmd: 'create_charge' },
+            {
+              userId,
+              amount: amountInCents,
+              currency: 'usd',
+              charge: createOrderDto.charge, // Card details from DTO
+              description: `Order for user ${userId}`,
+              metadata: {
+                userId,
+                itemCount: cartItems.length,
+              }
+            }
+          ).pipe(timeout(15000)) // 15 second timeout for payment
+        );
+        
+        console.log('[OrderService] Payment successful:', JSON.stringify(paymentResult));
+        
+      } catch (paymentError) {
+        console.error('[OrderService] Payment failed:', paymentError.message);
+        throw new RpcException({
+          message: 'Payment processing failed',
+          error: paymentError.message,
+        });
+      }
+
+
+      // 6. Create Order with status = paid
       const order = this.orderRepository.create({
         userId,
         subtotal,
@@ -179,7 +233,8 @@ export class OrderService {
         shippingFee,
         totalPrice,
         shippingAddressId: createOrderDto.shippingAddressId,
-        status: OrderStatus.PENDING,
+        status: OrderStatus.PAID,
+        paymentId: paymentResult.transactionId,
       });
 
       // 7. Save order and return with items
@@ -195,13 +250,23 @@ export class OrderService {
 
       console.log('[OrderService] Order items saved, count:', orderItems.length);
 
-      // Emit notification for order creation
-      this.notificationClient.emit('order_created', {
+      // Emit notification AFTER order is saved with full item details
+      const notificationPayload = {
+        email: user.email,
+        name: user.username || 'Customer',
         orderId: savedOrder.id,
-        userId,
-        totalPrice,
-        items: orderItems.length,
-      });
+        total: totalPrice,
+        items: orderItems.map(item => ({
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+        })),
+      };
+      
+      console.log('[OrderService] Emitting notification with payload:', JSON.stringify(notificationPayload));
+      this.notificationClient.emit('order_created', notificationPayload);
+      
+      console.log('[OrderService] Order creation notification emitted');
 
       // Return the order with items
       return this.orderRepository.findOne({

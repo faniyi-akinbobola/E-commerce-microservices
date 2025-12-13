@@ -1,5 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
+import { ClientProxy } from '@nestjs/microservices';
+import { lastValueFrom } from 'rxjs';
 
 
 interface SignupPayload {
@@ -31,9 +33,14 @@ interface PasswordResetSuccessPayload {
 
 interface OrderCreatedPayload {
   orderId: string;
-  userId: string;
-  totalPrice: number;
-  items: number;
+  email: string;
+  name: string;
+  total: number;
+  items: Array<{
+    name: string;
+    price: number;
+    quantity: number;
+  }>;
 }
 
 interface OrderPaidPayload {
@@ -54,7 +61,10 @@ interface OrderPaymentFailedPayload {
 export class NotificationsService {
 
     private readonly logger = new Logger(NotificationsService.name);
-    constructor(private readonly mailerService: MailerService){}
+    constructor(
+      private readonly mailerService: MailerService,
+      @Inject('AUTH_SERVICE') private readonly authClient: ClientProxy,
+    ){}
 
   /** ===========================
    *  SEND SIGNUP EMAIL
@@ -184,25 +194,25 @@ export class NotificationsService {
    *  SEND ORDER CREATED EMAIL
    *  =========================== **/
   async sendOrderCreatedEmail(data: OrderCreatedPayload) {
-    const { orderId, userId, totalPrice, items } = data;
+    const { orderId, email, name, total, items } = data;
 
     try {
-      // In a real app, you'd fetch user email from userId
-      // For now, we'll log it
-      this.logger.log(`Order created notification - OrderID: ${orderId}, UserID: ${userId}, Total: $${totalPrice}, Items: ${items}`);
-      
-      // TODO: Fetch user email and send actual email
-      // await this.mailerService.sendMail({
-      //   to: userEmail,
-      //   subject: 'Order Confirmation 🛍️',
-      //   template: './order/order-created',
-      //   context: {
-      //     orderId,
-      //     totalPrice,
-      //     items,
-      //   },
-      // });
+      this.logger.log(`Order created notification - OrderID: ${orderId}, Email: ${email}, Name: ${name}, Total: $${total}, Items: ${items?.length || 0}`);
 
+      // Send actual email
+      await this.mailerService.sendMail({
+        to: email,
+        subject: 'Order Confirmation 🛍️',
+        template: './orders/order-confirmation',
+        context: {
+          name: name || 'Customer',
+          orderId,
+          total: total,
+          items: items || [],
+        },
+      });
+
+      this.logger.log(`Order created email sent successfully to ${email} for order ${orderId}`);
       return { success: true };
     } catch (error) {
       this.logger.error(`Failed to send order created email for order ${orderId}`, error.stack);

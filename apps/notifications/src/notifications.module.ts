@@ -4,6 +4,8 @@ import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { QUEUES } from '@apps/common';
 
 @Module({
   imports: [
@@ -11,6 +13,17 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
       isGlobal: true,
       envFilePath: './apps/notifications/.env',
     }),
+    ClientsModule.register([
+      {
+        name: 'AUTH_SERVICE',
+        transport: Transport.RMQ,
+        options: {
+          urls: [process.env.RABBITMQ_URL || 'amqp://localhost:5672'],
+          queue: QUEUES.AUTH_QUEUE,
+          queueOptions: { durable: true },
+        },
+      },
+    ]),
     MailerModule.forRoot({
       transport: {
         host: process.env.MAIL_HOST,

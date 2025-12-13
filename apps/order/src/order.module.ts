@@ -8,9 +8,18 @@ import { QUEUES } from '@apps/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OrderItem } from './entities/order-item.entity';
 import { Order } from './entities/order-entity';
+import * as joi from 'joi';
 
 @Module({
-  imports: [DatabaseModule,
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: './apps/order/.env',
+      validationSchema: joi.object({
+        RABBITMQ_URL: joi.string().required(),
+      }),
+    })
+    ,DatabaseModule,
         ClientsModule.registerAsync([
       {
         name: 'NOTIFICATION_SERVICE',
@@ -64,6 +73,19 @@ import { Order } from './entities/order-entity';
         inject: [ConfigService],
         imports: [ConfigModule],
       },
+      {
+        name: 'PAYMENT_SERVICE',
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: (config: ConfigService) => ({
+          transport: Transport.RMQ,
+          options: {
+            urls: [config.get<string>('RABBITMQ_URL') as string],
+            queue: QUEUES.PAYMENT_QUEUE, 
+            queueOptions: { durable: true },
+          },
+        }),
+      },
     ]),
     TypeOrmModule.forFeature([OrderItem, Order])
   ],
@@ -76,6 +98,7 @@ export class OrderModule implements OnModuleInit {
     @Inject('CART_SERVICE') private cartClient: ClientProxy,
     @Inject('PRODUCT_SERVICE') private productClient: ClientProxy,
     @Inject('NOTIFICATION_SERVICE') private notificationClient: ClientProxy,
+    @Inject('PAYMENT_SERVICE') private paymentClient: ClientProxy,
   ) {}
 
   async onModuleInit() {
@@ -86,6 +109,7 @@ export class OrderModule implements OnModuleInit {
         this.cartClient.connect(),
         this.productClient.connect(),
         this.notificationClient.connect(),
+        this.paymentClient.connect(),
       ]);
       console.log('[OrderModule] ✅ All client proxies connected successfully');
     } catch (error) {

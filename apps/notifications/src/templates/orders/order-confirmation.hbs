@@ -2,15 +2,29 @@
 
 <p>Hi {{name}},</p>
 
-<p>Your order <strong>#{{orderId}}</strong> has been confirmed.</p>
+<p>
+  Your order <strong>#{{orderId}}</strong> has been successfully confirmed.
+</p>
 
-<h3>Order Summary:</h3>
+<h3>Order Summary</h3>
+
 <ul>
   {{#each items}}
-  <li>{{this.name}} — ₦{{this.price}}</li>
+    <li>
+      {{this.name}} — ₦{{this.price}}
+    </li>
   {{/each}}
 </ul>
 
-<p><strong>Total: ₦{{total}}</strong></p>
+<p>
+  <strong>Total: ₦{{total}}</strong>
+</p>
 
-<p>You will receive updates as your order is shipped and delivered.</p>
+<p>
+  We’re currently processing your order.
+  You’ll receive updates as your order is shipped and delivered.
+</p>
+
+<p>
+  Thank you for shopping with us! 🙏
+</p>

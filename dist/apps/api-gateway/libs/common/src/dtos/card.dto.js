@@ -9,34 +9,29 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CreateOrderDto = void 0;
+exports.CardDto = void 0;
 const class_validator_1 = require("class-validator");
-const create_charge_dto_1 = require("./create-charge.dto");
-const class_transformer_1 = require("class-transformer");
-class CreateOrderDto {
-    ;
+class CardDto {
 }
-exports.CreateOrderDto = CreateOrderDto;
+exports.CardDto = CardDto;
 __decorate([
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
-], CreateOrderDto.prototype, "userId", void 0);
+], CardDto.prototype, "cvc", void 0);
 __decorate([
-    (0, class_validator_1.IsArray)(),
-    (0, class_validator_1.IsOptional)(),
-    __metadata("design:type", Array)
-], CreateOrderDto.prototype, "items", void 0);
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], CardDto.prototype, "exp_month", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], CardDto.prototype, "exp_year", void 0);
+__decorate([
+    (0, class_validator_1.IsCreditCard)(),
+    __metadata("design:type", String)
+], CardDto.prototype, "number", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
-], CreateOrderDto.prototype, "shippingAddressId", void 0);
-__decorate([
-    (0, class_validator_1.IsDefined)(),
-    (0, class_validator_1.ValidateNested)(),
-    (0, class_validator_1.IsNotEmptyObject)(),
-    (0, class_transformer_1.Type)(() => create_charge_dto_1.CreateChargeDto),
-    __metadata("design:type", create_charge_dto_1.CreateChargeDto)
-], CreateOrderDto.prototype, "charge", void 0);
-//# sourceMappingURL=create-order.dto.js.map
+], CardDto.prototype, "token", void 0);
+//# sourceMappingURL=card.dto.js.map

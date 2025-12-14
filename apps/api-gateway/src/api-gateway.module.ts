@@ -2,30 +2,34 @@ import { Module } from '@nestjs/common';
 import { AuthController } from './auth/auth.controller';
 import { CartController } from './cart/cart.controller';
 import { InventoryController } from './inventory/inventory.controller';
-import { NotificationsController } from './notifications/notifications.controller';
 import { OrderController } from './order/order.controller';
-import { PaymentController } from './payment/payment.controller';
 import { ProductController } from './product/product.controller';
-import { APP_FILTER, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import {
   HttpExceptionFilter,
   TimeoutInterceptor,
   TrimPipe,
   ResponseInterceptor,
-  QUEUES
+  QUEUES,
+  CircuitBreakerModule
 } from '@apps/common';
 import { UsersController } from './users/users.controller';
 import { UsersAddressController } from './users-address/users-address.controller';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { ShippingController } from './shipping/shipping.controller';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './strategy/jwt.strategy';
 import { JwtBlacklistGuard } from './guards/jwt-blacklist.guard';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
-  imports: [
+  imports: [ 
+    CircuitBreakerModule,
+    ThrottlerModule.forRoot([{
+      ttl: 60000, // 60 seconds in milliseconds
+      limit: 10,
+    }]),
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -128,13 +132,10 @@ import { JwtBlacklistGuard } from './guards/jwt-blacklist.guard';
     AuthController,
     CartController,
     InventoryController,
-    NotificationsController,
     OrderController,
-    PaymentController,
     ProductController,
     UsersController,
     UsersAddressController,
-    ShippingController,
   ],
   providers: [
     JwtStrategy,
@@ -154,6 +155,10 @@ import { JwtBlacklistGuard } from './guards/jwt-blacklist.guard';
     {
       provide: APP_INTERCEPTOR,
       useClass: ResponseInterceptor,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
   ],
 })

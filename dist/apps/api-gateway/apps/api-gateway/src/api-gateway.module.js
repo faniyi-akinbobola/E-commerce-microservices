@@ -11,27 +11,30 @@ const common_1 = require("@nestjs/common");
 const auth_controller_1 = require("./auth/auth.controller");
 const cart_controller_1 = require("./cart/cart.controller");
 const inventory_controller_1 = require("./inventory/inventory.controller");
-const notifications_controller_1 = require("./notifications/notifications.controller");
 const order_controller_1 = require("./order/order.controller");
-const payment_controller_1 = require("./payment/payment.controller");
 const product_controller_1 = require("./product/product.controller");
 const core_1 = require("@nestjs/core");
 const common_2 = require("../../../libs/common/src");
 const users_controller_1 = require("./users/users.controller");
 const users_address_controller_1 = require("./users-address/users-address.controller");
 const microservices_1 = require("@nestjs/microservices");
-const shipping_controller_1 = require("./shipping/shipping.controller");
 const config_1 = require("@nestjs/config");
 const jwt_1 = require("@nestjs/jwt");
 const passport_1 = require("@nestjs/passport");
 const jwt_strategy_1 = require("./strategy/jwt.strategy");
 const jwt_blacklist_guard_1 = require("./guards/jwt-blacklist.guard");
+const throttler_1 = require("@nestjs/throttler");
 let ApiGatewayModule = class ApiGatewayModule {
 };
 exports.ApiGatewayModule = ApiGatewayModule;
 exports.ApiGatewayModule = ApiGatewayModule = __decorate([
     (0, common_1.Module)({
         imports: [
+            common_2.CircuitBreakerModule,
+            throttler_1.ThrottlerModule.forRoot([{
+                    ttl: 60000,
+                    limit: 10,
+                }]),
             config_1.ConfigModule.forRoot({
                 isGlobal: true,
             }),
@@ -111,19 +114,6 @@ exports.ApiGatewayModule = ApiGatewayModule = __decorate([
                     }),
                 },
                 {
-                    name: 'PAYMENT_SERVICE',
-                    imports: [config_1.ConfigModule],
-                    inject: [config_1.ConfigService],
-                    useFactory: (config) => ({
-                        transport: microservices_1.Transport.RMQ,
-                        options: {
-                            urls: [config.get('RABBITMQ_URL')],
-                            queue: common_2.QUEUES.PAYMENT_QUEUE,
-                            queueOptions: { durable: true },
-                        },
-                    }),
-                },
-                {
                     name: 'SHIPPING_SERVICE',
                     imports: [config_1.ConfigModule],
                     inject: [config_1.ConfigService],
@@ -142,13 +132,10 @@ exports.ApiGatewayModule = ApiGatewayModule = __decorate([
             auth_controller_1.AuthController,
             cart_controller_1.CartController,
             inventory_controller_1.InventoryController,
-            notifications_controller_1.NotificationsController,
             order_controller_1.OrderController,
-            payment_controller_1.PaymentController,
             product_controller_1.ProductController,
             users_controller_1.UsersController,
             users_address_controller_1.UsersAddressController,
-            shipping_controller_1.ShippingController,
         ],
         providers: [
             jwt_strategy_1.JwtStrategy,
@@ -168,6 +155,10 @@ exports.ApiGatewayModule = ApiGatewayModule = __decorate([
             {
                 provide: core_1.APP_INTERCEPTOR,
                 useClass: common_2.ResponseInterceptor,
+            },
+            {
+                provide: core_1.APP_GUARD,
+                useClass: throttler_1.ThrottlerGuard,
             },
         ],
     })

@@ -1,15 +1,22 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { OrderItem } from './entities/order-item.entity';
 import { Order, OrderStatus } from './entities/order-entity';
 import { Repository } from 'typeorm';
-import { CreateOrderDto, UpdateOrderStatusDto, CancelOrderDto, AddPaymentRecordDto } from '@apps/common';
+import { CreateOrderDto, UpdateOrderStatusDto, CancelOrderDto, AddPaymentRecordDto, CircuitBreakerService } from '@apps/common';
 import { RpcException, ClientProxy } from '@nestjs/microservices';
 import { lastValueFrom, timeout } from 'rxjs';
 
 
 @Injectable()
-export class OrderService {
+export class OrderService implements OnModuleInit {
+  private readonly logger = new Logger(OrderService.name);
+
+  // Circuit breakers for external service calls
+  private getUserAddressCircuit;
+  private getUserByIdCircuit;
+  private getProductCircuit;
+
   constructor(
     @InjectRepository(Order) private readonly orderRepository: Repository<Order>,
     @InjectRepository(OrderItem) private readonly orderItemRepository: Repository<OrderItem>,
@@ -18,7 +25,76 @@ export class OrderService {
     @Inject('PRODUCT_SERVICE') private readonly productClient: ClientProxy,
     @Inject('NOTIFICATION_SERVICE') private readonly notificationClient: ClientProxy,
     @Inject('PAYMENT_SERVICE') private readonly paymentClient: ClientProxy,
+    private readonly circuitBreakerService: CircuitBreakerService,
   ){}
+
+  onModuleInit() {
+    this.initializeCircuitBreakers();
+  }
+
+  private initializeCircuitBreakers() {
+    // Circuit breaker for Auth Service - Get User Address
+    this.getUserAddressCircuit = this.circuitBreakerService.createCircuitBreaker(
+      async (data: any) => {
+        return await lastValueFrom(
+          this.authClient.send(
+            { cmd: 'get_user_address_by_id' },
+            data
+          ).pipe(timeout(10000))
+        );
+      },
+      {
+        timeout: 10000,
+        errorThresholdPercentage: 50,
+        resetTimeout: 30000,
+        name: 'order_get_user_address',
+      }
+    );
+
+    this.getUserAddressCircuit.fallback(() => {
+      throw new RpcException('Unable to retrieve shipping address. Auth service is temporarily unavailable.');
+    });
+
+    // Circuit breaker for Auth Service - Get User Details
+    this.getUserByIdCircuit = this.circuitBreakerService.createCircuitBreaker(
+      async (data: any) => {
+        return await lastValueFrom(
+          this.authClient.send({ cmd: 'get_user_by_id' }, data).pipe(timeout(5000))
+        );
+      },
+      {
+        timeout: 5000,
+        errorThresholdPercentage: 50,
+        resetTimeout: 30000,
+        name: 'order_get_user_by_id',
+      }
+    );
+
+    this.getUserByIdCircuit.fallback(() => {
+      throw new RpcException('Unable to retrieve user details. Auth service is temporarily unavailable.');
+    });
+
+    // Circuit breaker for Product Service - Get Product Details
+    this.getProductCircuit = this.circuitBreakerService.createCircuitBreaker(
+      async (data: any) => {
+        return await lastValueFrom(
+          this.productClient.send({ cmd: 'get_product_by_id' }, data).pipe(timeout(5000))
+        );
+      },
+      {
+        timeout: 5000,
+        errorThresholdPercentage: 50,
+        resetTimeout: 30000,
+        name: 'order_get_product',
+      }
+    );
+
+    this.getProductCircuit.fallback(() => {
+      throw new RpcException('Unable to retrieve product details. Product service is temporarily unavailable.');
+    });
+
+    this.logger.log('All order service circuit breakers initialized');
+  }
 
 
   async updateOrderStatus(updateOrderStatusDto: UpdateOrderStatusDto) {
@@ -93,14 +169,10 @@ export class OrderService {
       
       let address;
       try {
-        address = await lastValueFrom(
-          this.authClient.send(
-            { cmd: 'get_user_address_by_id' },
-            { id: createOrderDto.shippingAddressId, userId }
-          ).pipe(
-            timeout(10000) // 10 second timeout
-          )
-        );
+        address = await this.getUserAddressCircuit.fire({ 
+          id: createOrderDto.shippingAddressId, 
+          userId 
+        });
         
         console.log('[OrderService] Address retrieved:', JSON.stringify(address));
 
@@ -120,9 +192,7 @@ export class OrderService {
       
       // 1. Get user details for email notification
       console.log('[OrderService] Fetching user data for notifications');
-      const user = await lastValueFrom(
-        this.authClient.send({ cmd: 'get_user_by_id' }, { id: userId })
-      );
+      const user = await this.getUserByIdCircuit.fire({ id: userId });
       
       if (!user) {
         throw new RpcException('User not found');
@@ -161,9 +231,7 @@ export class OrderService {
       for (const item of cartItems) {
         console.log('[OrderService] Fetching product:', item.productId);
         
-        const product = await lastValueFrom(
-          this.productClient.send({ cmd: 'get_product_by_id' }, { id: item.productId })
-        );
+        const product = await this.getProductCircuit.fire({ id: item.productId });
 
         console.log('[OrderService] Product retrieved:', JSON.stringify(product));
 

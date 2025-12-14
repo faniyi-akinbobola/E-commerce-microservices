@@ -64,11 +64,11 @@ __decorate([
     __metadata("design:type", String)
 ], Order.prototype, "paymentId", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.CreateDateColumn)(),
     __metadata("design:type", Date)
 ], Order.prototype, "createdAt", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
+    (0, typeorm_1.UpdateDateColumn)(),
     __metadata("design:type", Date)
 ], Order.prototype, "updatedAt", void 0);
 exports.Order = Order = __decorate([

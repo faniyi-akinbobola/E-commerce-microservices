@@ -4,7 +4,7 @@ import { OrderService } from './order.service';
 import { DatabaseModule } from './database/database.module';
 import { ClientsModule, Transport, ClientProxy } from '@nestjs/microservices';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { QUEUES } from '@apps/common';
+import { QUEUES, CircuitBreakerModule } from '@apps/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OrderItem } from './entities/order-item.entity';
 import { Order } from './entities/order-entity';
@@ -12,6 +12,7 @@ import * as joi from 'joi';
 
 @Module({
   imports: [
+    CircuitBreakerModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: './apps/order/.env',

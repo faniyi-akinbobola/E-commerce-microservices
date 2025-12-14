@@ -40,4 +40,5 @@ __exportStar(require("./create-order.dto"), exports);
 __exportStar(require("./update-order-status.dto"), exports);
 __exportStar(require("./cancel-order.dto"), exports);
 __exportStar(require("./add-payment-record.dto"), exports);
+__exportStar(require("./create-charge.dto"), exports);
 //# sourceMappingURL=index.js.map

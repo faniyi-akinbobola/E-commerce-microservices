@@ -9,8 +9,8 @@ export class OrderController {
 
 
   @MessagePattern({ cmd: 'create_order' })
-  createOrder(@Payload() data :{userId: string, dto: CreateOrderDto}) {
-    return this.orderService.createOrder(data.userId, data.dto);
+  createOrder(@Payload() data :{userId: string, dto: CreateOrderDto, idempotencyKey: string}) {
+    return this.orderService.createOrder(data.userId, data.dto, data.idempotencyKey);
   }
 
   @MessagePattern({ cmd: 'get_order_by_id' })
@@ -30,13 +30,13 @@ export class OrderController {
   }
 
   @MessagePattern({ cmd: 'cancel_order' })
-  cancelOrder(@Payload() data: {userId:string ,dto: CancelOrderDto}) {
-    return this.orderService.cancelOrder(data.userId, data.dto);
+  cancelOrder(@Payload() data: {userId:string ,dto: CancelOrderDto, idempotencyKey: string}) {
+    return this.orderService.cancelOrder(data.userId, data.dto, data.idempotencyKey);
   }
 
   @MessagePattern({ cmd: 'update_order_status' })
-  updateOrderStatus(@Payload() dto: UpdateOrderStatusDto) {
-    return this.orderService.updateOrderStatus(dto);
+  updateOrderStatus(@Payload() data: {dto: UpdateOrderStatusDto, idempotencyKey: string}) {
+    return this.orderService.updateOrderStatus(data.dto, data.idempotencyKey);
   }
 
   @MessagePattern({ cmd: 'add_payment_record' })

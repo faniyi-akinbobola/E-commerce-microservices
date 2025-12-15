@@ -1,10 +1,12 @@
-import { Body, Controller, Inject, Post, OnModuleInit, Logger } from '@nestjs/common';
+import { Body, Controller, Inject, Post, OnModuleInit, Logger, UseInterceptors } from '@nestjs/common';
 import { CreateUserDto, LoginDto, QUEUES,RefreshTokenDto, ResetPasswordDto,ForgotPasswordDto, ChangePasswordDto, CircuitBreakerService } from '@apps/common';
 import { UseGuards, Get, Request } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { JwtBlacklistGuard } from '../guards/jwt-blacklist.guard';
 import { timeout, catchError, throwError, firstValueFrom } from 'rxjs';
+import { IdempotencyInterceptor } from '../interceptors/idempotency.interceptor';
 
+@UseInterceptors(IdempotencyInterceptor)
 @Controller('auth')
 export class AuthController implements OnModuleInit {
       private readonly logger = new Logger(AuthController.name);

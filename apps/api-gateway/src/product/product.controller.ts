@@ -1,13 +1,15 @@
-import { Controller, Post, UseGuards,Get, Patch,Delete,Param,Body, OnModuleInit , Logger, ServiceUnavailableException} from '@nestjs/common';
+import { Controller, Post, UseGuards,Get, Patch,Delete,Param,Body, OnModuleInit , Logger, ServiceUnavailableException, UseInterceptors} from '@nestjs/common';
 import { JwtBlacklistGuard } from '../guards/jwt-blacklist.guard';
 import { ClientProxy } from '@nestjs/microservices';
 import { Inject } from '@nestjs/common';
 import { CreateCategoryDto, CreateProductDto, Public, RolesGuard, UpdateCategoryDto, UpdateProductDto, CircuitBreakerService } from '@apps/common';
 import { Roles } from '@apps/common';
 import { lastValueFrom, timeout } from 'rxjs';
-import { error, time, timeEnd } from 'console';
+import { IdempotencyInterceptor } from '../interceptors/idempotency.interceptor';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 
 
+@UseInterceptors(IdempotencyInterceptor)
 @UseGuards(JwtBlacklistGuard, RolesGuard)
 @Controller('product')
 export class ProductController  implements OnModuleInit{
@@ -302,6 +304,8 @@ export class ProductController  implements OnModuleInit{
     }
 
     @Public()
+    @UseInterceptors(CacheInterceptor)
+    @CacheTTL(30)
     @Get('getproducts')
     async getProducts(){
         try {
@@ -313,6 +317,8 @@ export class ProductController  implements OnModuleInit{
     }
 
     @Public()
+    @UseInterceptors(CacheInterceptor)
+    @CacheTTL(30)
     @Get('getproduct/:id')
     async getProductById(@Param('id') id:string){
         try {
@@ -324,6 +330,8 @@ export class ProductController  implements OnModuleInit{
     }
 
     @Public()
+    @UseInterceptors(CacheInterceptor)
+    @CacheTTL(30)
     @Get('getproductsbyslug/:slug')
     async getProductsBySlug(@Param('slug') slug:string){
         try {
@@ -335,6 +343,8 @@ export class ProductController  implements OnModuleInit{
     }
 
     @Public()
+    @UseInterceptors(CacheInterceptor)
+    @CacheTTL(30)
     @Get('getavailableproducts')
     async getAvailableProducts(){
         try {
@@ -367,6 +377,8 @@ export class ProductController  implements OnModuleInit{
     }
     
     @Public()
+    @UseInterceptors(CacheInterceptor)
+    @CacheTTL(30)
     @Get('getproductsbycategory/:slug')
     async getProductsByCategory(@Param('slug') slug: string){
         try {
@@ -389,6 +401,8 @@ export class ProductController  implements OnModuleInit{
     }
 
     @Public()
+    @UseInterceptors(CacheInterceptor)
+    @CacheTTL(30)
     @Get('getcategories')
     async getCategories(){
         try {
@@ -400,6 +414,8 @@ export class ProductController  implements OnModuleInit{
     }
 
     @Public()
+    @UseInterceptors(CacheInterceptor)
+    @CacheTTL(30)
     @Get('getcategory/:id')
     async getCategoryById(@Param('id') id:string){
         try {
@@ -433,6 +449,8 @@ export class ProductController  implements OnModuleInit{
     }
 
     @Public()
+    @UseInterceptors(CacheInterceptor)
+    @CacheTTL(30)
     @Get('getcategoriesbyslug/:slug')
     async getCategoriesBySlug(@Param('slug') slug: string){
         try {

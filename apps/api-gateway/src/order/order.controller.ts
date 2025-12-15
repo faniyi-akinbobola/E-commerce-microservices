@@ -1,11 +1,13 @@
-import { Controller, Post, Get, Patch, Body, Param, Inject, UseGuards, Req, OnModuleInit, Logger } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, Param, Inject, UseGuards, Req, OnModuleInit, Logger, UseInterceptors } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { CreateOrderDto, UpdateOrderStatusDto, CancelOrderDto, AddPaymentRecordDto, CircuitBreakerService } from '@apps/common';
 import { lastValueFrom, timeout } from 'rxjs';
 import { JwtBlacklistGuard } from '../guards/jwt-blacklist.guard';
+import { IdempotencyInterceptor } from '../interceptors/idempotency.interceptor';
 
-@Controller('orders')
+@UseInterceptors(IdempotencyInterceptor)
 @UseGuards(JwtBlacklistGuard)
+@Controller('orders')
 export class OrderController implements OnModuleInit {
   private readonly logger = new Logger(OrderController.name);
 
@@ -168,7 +170,12 @@ export class OrderController implements OnModuleInit {
   async createOrder(@Req() req, @Body() createOrderDto: CreateOrderDto) {
     try {
       const userId = req.user.userId;
-      return await this.createOrderCircuit.fire({ userId, dto: createOrderDto });
+      const idempotencyKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'];
+      return await this.createOrderCircuit.fire({ 
+        userId, 
+        dto: createOrderDto, 
+        idempotencyKey 
+      });
     } catch (error) {
       this.logger.error(`Create order failed: ${error.message}`);
       throw error;
@@ -210,7 +217,12 @@ export class OrderController implements OnModuleInit {
   async cancelOrder(@Req() req, @Param('id') orderId: string) {
     try {
       const userId = req.user.userId;
-      return await this.cancelOrderCircuit.fire({ userId, dto: { orderId, userId } });
+      const idempotencyKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'];
+      return await this.cancelOrderCircuit.fire({ 
+        userId, 
+        dto: { orderId, userId }, 
+        idempotencyKey 
+      });
     } catch (error) {
       this.logger.error(`Cancel order failed: ${error.message}`);
       throw error;
@@ -218,9 +230,14 @@ export class OrderController implements OnModuleInit {
   }
 
   @Patch(':id/status')
-  async updateOrderStatus(@Param('id') orderId: string, @Body() updateDto: { status: string }) {
+  async updateOrderStatus(@Req() req, @Param('id') orderId: string, @Body() updateDto: { status: string }) {
     try {
-      return await this.updateOrderStatusCircuit.fire({ orderId, status: updateDto.status });
+      const idempotencyKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'];
+      return await this.updateOrderStatusCircuit.fire({ 
+        orderId, 
+        status: updateDto.status, 
+        idempotencyKey 
+      });
     } catch (error) {
       this.logger.error(`Update order status failed: ${error.message}`);
       throw error;

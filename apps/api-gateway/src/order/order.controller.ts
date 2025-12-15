@@ -170,7 +170,12 @@ export class OrderController implements OnModuleInit {
   async createOrder(@Req() req, @Body() createOrderDto: CreateOrderDto) {
     try {
       const userId = req.user.userId;
-      return await this.createOrderCircuit.fire({ userId, dto: createOrderDto });
+      const idempotencyKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'];
+      return await this.createOrderCircuit.fire({ 
+        userId, 
+        dto: createOrderDto, 
+        idempotencyKey 
+      });
     } catch (error) {
       this.logger.error(`Create order failed: ${error.message}`);
       throw error;
@@ -212,7 +217,12 @@ export class OrderController implements OnModuleInit {
   async cancelOrder(@Req() req, @Param('id') orderId: string) {
     try {
       const userId = req.user.userId;
-      return await this.cancelOrderCircuit.fire({ userId, dto: { orderId, userId } });
+      const idempotencyKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'];
+      return await this.cancelOrderCircuit.fire({ 
+        userId, 
+        dto: { orderId, userId }, 
+        idempotencyKey 
+      });
     } catch (error) {
       this.logger.error(`Cancel order failed: ${error.message}`);
       throw error;
@@ -220,9 +230,14 @@ export class OrderController implements OnModuleInit {
   }
 
   @Patch(':id/status')
-  async updateOrderStatus(@Param('id') orderId: string, @Body() updateDto: { status: string }) {
+  async updateOrderStatus(@Req() req, @Param('id') orderId: string, @Body() updateDto: { status: string }) {
     try {
-      return await this.updateOrderStatusCircuit.fire({ orderId, status: updateDto.status });
+      const idempotencyKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'];
+      return await this.updateOrderStatusCircuit.fire({ 
+        orderId, 
+        status: updateDto.status, 
+        idempotencyKey 
+      });
     } catch (error) {
       this.logger.error(`Update order status failed: ${error.message}`);
       throw error;

@@ -1,4 +1,4 @@
-import { Controller, Inject, Patch, Post, UseGuards, Body,Param, Get,OnModuleInit,Logger, ServiceUnavailableException, UseInterceptors } from '@nestjs/common';
+import { Controller, Inject, Patch, Post, UseGuards, Body,Param, Get,OnModuleInit,Logger, ServiceUnavailableException, UseInterceptors, Req } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { JwtBlacklistGuard } from '../guards/jwt-blacklist.guard';
 import { CreateInventoryDto, UpdateInventoryDto, AddStockDto, ReduceStockDto, ReleaseStockDto, ReserveStockDto, Roles, Public } from '@apps/common';
@@ -188,10 +188,10 @@ export class InventoryController implements OnModuleInit {
 
     @Roles('ADMIN', 'INVENTORY_MANAGER')
     @Post('reducestock')
-    async reduceStock(@Body() body: ReduceStockDto) {
-        // return this.inventoryClient.send({ cmd: 'reduce_stock' }, body);
+    async reduceStock(@Req() req, @Body() body: ReduceStockDto) {
         try {
-            return await this.reduceStockCircuit.fire(body);
+            const idempotencyKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'];
+            return await this.reduceStockCircuit.fire({ dto: body, idempotencyKey });
         } catch (error) {
             this.logger.error(`Reduce stock failed: ${error.message}`);
             throw error;
@@ -200,10 +200,10 @@ export class InventoryController implements OnModuleInit {
 
     @Roles('ADMIN', 'INVENTORY_MANAGER')
     @Post('releasestock')
-    async releaseStock(@Body() body: ReleaseStockDto) {
-        // return this.inventoryClient.send({ cmd: 'release_stock' }, body);
+    async releaseStock(@Req() req, @Body() body: ReleaseStockDto) {
         try {
-            return await this.releaseStockCircuit.fire(body);
+            const idempotencyKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'];
+            return await this.releaseStockCircuit.fire({ releaseStockDto: body, idempotencyKey });
         } catch (error) {
             this.logger.error(`Release stock failed: ${error.message}`);
             throw error;
@@ -212,10 +212,10 @@ export class InventoryController implements OnModuleInit {
 
     @Roles('ADMIN', 'INVENTORY_MANAGER')
     @Post('reservestock')
-    async reserveStock(@Body() body: ReserveStockDto) {
-        // return this.inventoryClient.send({ cmd: 'reserve_stock' }, body);
+    async reserveStock(@Req() req, @Body() body: ReserveStockDto) {
         try {
-            return await this.reserveStockCircuit.fire(body);
+            const idempotencyKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'];
+            return await this.reserveStockCircuit.fire({ reserveStockDto: body, idempotencyKey });
         } catch (error) {
             this.logger.error(`Reserve stock failed: ${error.message}`);
             throw error;
@@ -224,10 +224,10 @@ export class InventoryController implements OnModuleInit {
 
     @Roles('ADMIN', 'INVENTORY_MANAGER')
     @Post('addstock')
-    async addStock(@Body() body: AddStockDto) {
-        // return this.inventoryClient.send({ cmd: 'add_stock' }, body)
+    async addStock(@Req() req, @Body() body: AddStockDto) {
         try {
-            return await this.addStockCircuit.fire(body);
+            const idempotencyKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'];
+            return await this.addStockCircuit.fire({ addStockDto: body, idempotencyKey });
         } catch (error) {
             this.logger.error(`Add stock failed: ${error.message}`);
             throw error;
@@ -260,10 +260,10 @@ export class InventoryController implements OnModuleInit {
 
     @Roles('ADMIN', 'INVENTORY_MANAGER')
     @Post('createinventory')
-    async createInventory(@Body() body: CreateInventoryDto) {
-        // return this.inventoryClient.send({ cmd: 'create_inventory' }, body);
+    async createInventory(@Req() req, @Body() body: CreateInventoryDto) {
         try {
-            return await this.createInventoryCircuit.fire(body);
+            const idempotencyKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'];
+            return await this.createInventoryCircuit.fire({ createInventoryDto: body, idempotencyKey });
         } catch (error) {
             this.logger.error(`Create inventory failed: ${error.message}`);
             throw error;
@@ -272,10 +272,10 @@ export class InventoryController implements OnModuleInit {
 
     @Roles('ADMIN', 'INVENTORY_MANAGER')
     @Patch('updateinventory/:productId')
-    async updateInventory(@Param('productId') productId: string, @Body() body: UpdateInventoryDto) {
-        // return this.inventoryClient.send({ cmd: 'update_inventory' }, { productId, ...body });
+    async updateInventory(@Req() req, @Param('productId') productId: string, @Body() body: UpdateInventoryDto) {
         try {
-            return await this.updateInventoryCircuit.fire({ productId, ...body });
+            const idempotencyKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'];
+            return await this.updateInventoryCircuit.fire({ productId, updateInventoryDto: body, idempotencyKey });
         } catch (error) {
             this.logger.error(`Update inventory failed: ${error.message}`);
             throw error;

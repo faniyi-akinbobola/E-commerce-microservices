@@ -23,9 +23,16 @@ import { JwtStrategy } from './strategy/jwt.strategy';
 import { JwtBlacklistGuard } from './guards/jwt-blacklist.guard';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { RedisModule } from '@nestjs-modules/ioredis';
+import { CacheModule } from '@nestjs/cache-manager';
+import * as redisStore from 'cache-manager-redis-store';
 
 @Module({
-  imports: [ RedisModule.forRootAsync({
+  imports: [ CacheModule.register({
+      store: redisStore as any,
+      url: process.env.REDIS_URL, // redis://localhost:6379
+      ttl: 60, // default TTL in seconds
+      isGlobal: true,
+    }), RedisModule.forRootAsync({
     imports: [ConfigModule],
     inject: [ConfigService],
     useFactory: (configService: ConfigService)=>({

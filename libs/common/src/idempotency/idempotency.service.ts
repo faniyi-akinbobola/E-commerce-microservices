@@ -87,6 +87,7 @@ export class IdempotencyService {
     serviceName: string,
     endpoint: string,
     responseData: any,
+    result: any,
     statusCode?: number,
   ): Promise<void> {
     await this.idempotencyRepo.update(

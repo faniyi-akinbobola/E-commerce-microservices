@@ -2,7 +2,7 @@ import { Injectable, Inject, OnModuleInit, Logger, ServiceUnavailableException }
 import { InjectRepository } from '@nestjs/typeorm';
 import { OrderItem } from './entities/order-item.entity';
 import { Order, OrderStatus } from './entities/order-entity';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { CreateOrderDto, UpdateOrderStatusDto, CancelOrderDto, AddPaymentRecordDto, CircuitBreakerService } from '@apps/common';
 import { RpcException, ClientProxy } from '@nestjs/microservices';
 import { lastValueFrom, timeout } from 'rxjs';
@@ -31,6 +31,7 @@ export class OrderService implements OnModuleInit {
     @Inject('PAYMENT_SERVICE') private readonly paymentClient: ClientProxy,
     private readonly circuitBreakerService: CircuitBreakerService,
     private readonly idempotencyService: IdempotencyService,
+    private readonly dataSource: DataSource, // For transactions and row locking
   ){}
 
   onModuleInit() {
@@ -156,39 +157,147 @@ export class OrderService implements OnModuleInit {
   }
 
 
-  async updateOrderStatus(updateOrderStatusDto: UpdateOrderStatusDto) {
-    const order = await this.orderRepository.findOne({
-      where: { id: updateOrderStatusDto.orderId },
-    });
+  async updateOrderStatus(updateOrderStatusDto: UpdateOrderStatusDto, idempotencyKey: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    if (!order) {
-      throw new RpcException('Order not found');
+    try {
+      const idempotencyCheck = await this.idempotencyService.checkIdempotency(
+        idempotencyKey,
+        'order-service',
+        '/order/update',
+        updateOrderStatusDto
+      );
+
+      if (idempotencyCheck.exists && idempotencyCheck.status === 'completed') {
+        await queryRunner.release();
+        return idempotencyCheck.data;
+      }
+
+      if (idempotencyCheck.exists && idempotencyCheck.status === 'pending') {
+        await queryRunner.release();
+        throw new RpcException('Request is already being processed. Please wait.');
+      }
+
+      // Lock the order row to prevent concurrent updates
+      const order = await queryRunner.manager.findOne(Order, {
+        where: { id: updateOrderStatusDto.orderId },
+        lock: { mode: 'pessimistic_write' }
+      });
+
+      if (!order) {
+        await queryRunner.rollbackTransaction();
+        await queryRunner.release();
+        throw new RpcException('Order not found');
+      }
+
+      order.status = updateOrderStatusDto.status;
+      order.updatedAt = new Date();
+
+      const updatedOrderStatus = await queryRunner.manager.save(Order, order);
+
+      await this.idempotencyService.markCompleted(
+        idempotencyKey,
+        'order-service',
+        '/order/update',
+        updateOrderStatusDto,
+        updatedOrderStatus
+      );
+
+      await queryRunner.commitTransaction();
+      await queryRunner.release();
+
+      return updatedOrderStatus;
+
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      await queryRunner.release();
+
+      await this.idempotencyService.markFailed(
+        idempotencyKey,
+        'order-service',
+        '/order/update',
+        error.message || 'Failed to update order status'
+      );
+
+      throw error;
     }
-
-    order.status = updateOrderStatusDto.status;
-    order.updatedAt = new Date();
-
-    return this.orderRepository.save(order);
   }
 
-  async cancelOrder(userId: string, cancelOrderDto: CancelOrderDto) {
-    const order = await this.orderRepository.findOne({
-      where: { id: cancelOrderDto.orderId, userId },
-      relations: ['items'],
-    });
+  async cancelOrder(userId: string, cancelOrderDto: CancelOrderDto, idempotencyKey: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    if (!order) {
-      throw new RpcException('Order not found or unauthorized');
+    try {
+      const check = await this.idempotencyService.checkIdempotency(
+        idempotencyKey,
+        'order-service',
+        '/order/cancel',
+        cancelOrderDto
+      );
+
+      if (check.exists && check.status === 'completed') {
+        await queryRunner.release();
+        return check.data;
+      }
+
+      if (check.exists && check.status === 'pending') {
+        await queryRunner.release();
+        throw new RpcException('Request is already being processed. Please wait.');
+      }
+
+      // Lock the order row to prevent concurrent cancellations
+      const order = await queryRunner.manager.findOne(Order, {
+        where: { id: cancelOrderDto.orderId, userId },
+        relations: ['items'],
+        lock: { mode: 'pessimistic_write' }
+      });
+
+      if (!order) {
+        await queryRunner.rollbackTransaction();
+        await queryRunner.release();
+        throw new RpcException('Order not found or unauthorized');
+      }
+
+      if (order.status === OrderStatus.SHIPPED || order.status === OrderStatus.DELIVERED) {
+        await queryRunner.rollbackTransaction();
+        await queryRunner.release();
+        throw new RpcException('Cannot cancel order that has been shipped or delivered');
+      }
+
+      order.status = OrderStatus.CANCELLED;
+      order.updatedAt = new Date();
+
+      const savedOrder = await queryRunner.manager.save(Order, order);
+
+      await this.idempotencyService.markCompleted(
+        idempotencyKey,
+        'order-service',
+        '/order/cancel',
+        cancelOrderDto,
+        savedOrder,
+      );
+
+      await queryRunner.commitTransaction();
+      await queryRunner.release();
+
+      return savedOrder;
+
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      await queryRunner.release();
+
+      await this.idempotencyService.markFailed(
+        idempotencyKey,
+        'order-service',
+        '/order/cancel',
+        error.message || 'Failed to cancel order',
+      );
+
+      throw error;
     }
-
-    if (order.status === OrderStatus.SHIPPED || order.status === OrderStatus.DELIVERED) {
-      throw new RpcException('Cannot cancel order that has been shipped or delivered');
-    }
-
-    order.status = OrderStatus.CANCELLED;
-    order.updatedAt = new Date();
-
-    return this.orderRepository.save(order);
   }
 
   async getUserOrders(userId: string) {
@@ -352,8 +461,7 @@ export class OrderService implements OnModuleInit {
             itemCount: cartItems.length,
           }
         });
-        
-        console.log('[OrderService] Payment successful:', JSON.stringify(paymentResult));
+      
         
       } catch (error) {
         this.logger.error(`Payment service failed: ${error.message}`);
@@ -456,6 +564,7 @@ export class OrderService implements OnModuleInit {
         idempotencyKey,
         'order-service',
         '/order/create',
+        createOrderDto,
         finalOrder,
         201, // HTTP status code for created
       );
@@ -509,7 +618,7 @@ export class OrderService implements OnModuleInit {
       order.status = OrderStatus.PAID;
       
       // Emit notification for successful payment
-      this.notificationClient.emit('order_paid', {
+      this.getNotificationCircuit.fire({
         orderId: order.id,
         userId: order.userId,
         amount: order.totalPrice,
@@ -519,12 +628,18 @@ export class OrderService implements OnModuleInit {
       order.status = OrderStatus.CANCELLED;
       
       // Emit notification for failed payment
-      this.notificationClient.emit('order_payment_failed', {
-        orderId: order.id,
-        userId: order.userId,
-        amount: order.totalPrice,
-        reason: 'Payment failed',
-      });
+      // this.notificationClient.emit('order_payment_failed', {
+      //   orderId: order.id,
+      //   userId: order.userId,
+      //   amount: order.totalPrice,
+      //   reason: 'Payment failed',
+      // });
+  this.getNotificationCircuit.fire({
+  orderId: order.id,
+  userId: order.userId,
+  amount: order.totalPrice,
+  reason: 'Payment failed'
+ })
     } else {
       throw new RpcException('Invalid payment status');
     }
@@ -534,3 +649,4 @@ export class OrderService implements OnModuleInit {
 
 
 }
+

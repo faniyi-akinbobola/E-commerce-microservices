@@ -51,10 +51,10 @@ export class PaymentService implements OnModuleInit {
   }
 
   async createCharge(data: any) {
-    const { amount, currency, charge, userId, description, metadata } = data;
+    const { amount, currency, charge, userId, description, metadata, idempotencyKey } = data;
     
     // Generate idempotency key to prevent duplicate charges
-    const idempotencyKey = randomUUID();
+    // const idempotencyKey = randomUUID();
     
     this.logger.log(`Creating payment intent for user ${userId} with amount ${amount} and idempotency key ${idempotencyKey}`);
     
@@ -69,12 +69,14 @@ export class PaymentService implements OnModuleInit {
         metadata: {
           ...metadata,
           userId,
-          idempotencyKey, // Store for tracking
+        // Store for tracking
         },
         automatic_payment_methods: {
           enabled: true,
           allow_redirects: 'never'
         },
+        idempotencyKey         // Store for tracking
+
       };
 
       // Call Stripe through circuit breaker

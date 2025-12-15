@@ -6,6 +6,8 @@ import { CreateCategoryDto, CreateProductDto, Public, RolesGuard, UpdateCategory
 import { Roles } from '@apps/common';
 import { lastValueFrom, timeout } from 'rxjs';
 import { IdempotencyInterceptor } from '../interceptors/idempotency.interceptor';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
+
 
 @UseInterceptors(IdempotencyInterceptor)
 @UseGuards(JwtBlacklistGuard, RolesGuard)
@@ -302,6 +304,8 @@ export class ProductController  implements OnModuleInit{
     }
 
     @Public()
+    @UseInterceptors(CacheInterceptor)
+    @CacheTTL(30)
     @Get('getproducts')
     async getProducts(){
         try {
@@ -313,6 +317,8 @@ export class ProductController  implements OnModuleInit{
     }
 
     @Public()
+    @UseInterceptors(CacheInterceptor)
+    @CacheTTL(30)
     @Get('getproduct/:id')
     async getProductById(@Param('id') id:string){
         try {
@@ -324,6 +330,8 @@ export class ProductController  implements OnModuleInit{
     }
 
     @Public()
+    @UseInterceptors(CacheInterceptor)
+    @CacheTTL(30)
     @Get('getproductsbyslug/:slug')
     async getProductsBySlug(@Param('slug') slug:string){
         try {
@@ -335,6 +343,8 @@ export class ProductController  implements OnModuleInit{
     }
 
     @Public()
+    @UseInterceptors(CacheInterceptor)
+    @CacheTTL(30)
     @Get('getavailableproducts')
     async getAvailableProducts(){
         try {
@@ -367,6 +377,8 @@ export class ProductController  implements OnModuleInit{
     }
     
     @Public()
+    @UseInterceptors(CacheInterceptor)
+    @CacheTTL(30)
     @Get('getproductsbycategory/:slug')
     async getProductsByCategory(@Param('slug') slug: string){
         try {
@@ -389,6 +401,8 @@ export class ProductController  implements OnModuleInit{
     }
 
     @Public()
+    @UseInterceptors(CacheInterceptor)
+    @CacheTTL(30)
     @Get('getcategories')
     async getCategories(){
         try {
@@ -400,6 +414,8 @@ export class ProductController  implements OnModuleInit{
     }
 
     @Public()
+    @UseInterceptors(CacheInterceptor)
+    @CacheTTL(30)
     @Get('getcategory/:id')
     async getCategoryById(@Param('id') id:string){
         try {
@@ -433,6 +449,8 @@ export class ProductController  implements OnModuleInit{
     }
 
     @Public()
+    @UseInterceptors(CacheInterceptor)
+    @CacheTTL(30)
     @Get('getcategoriesbyslug/:slug')
     async getCategoriesBySlug(@Param('slug') slug: string){
         try {

@@ -1,11 +1,13 @@
-import { Controller, Post, Get, Patch, Body, Param, Inject, UseGuards, Req, OnModuleInit, Logger } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, Param, Inject, UseGuards, Req, OnModuleInit, Logger, UseInterceptors } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { CreateOrderDto, UpdateOrderStatusDto, CancelOrderDto, AddPaymentRecordDto, CircuitBreakerService } from '@apps/common';
 import { lastValueFrom, timeout } from 'rxjs';
 import { JwtBlacklistGuard } from '../guards/jwt-blacklist.guard';
+import { IdempotencyInterceptor } from '../interceptors/idempotency.interceptor';
 
-@Controller('orders')
+@UseInterceptors(IdempotencyInterceptor)
 @UseGuards(JwtBlacklistGuard)
+@Controller('orders')
 export class OrderController implements OnModuleInit {
   private readonly logger = new Logger(OrderController.name);
 

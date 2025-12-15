@@ -1,11 +1,13 @@
-import { Controller, Inject, Patch, Post, UseGuards, Body,Param, Get,OnModuleInit,Logger, ServiceUnavailableException } from '@nestjs/common';
+import { Controller, Inject, Patch, Post, UseGuards, Body,Param, Get,OnModuleInit,Logger, ServiceUnavailableException, UseInterceptors } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { JwtBlacklistGuard } from '../guards/jwt-blacklist.guard';
 import { CreateInventoryDto, UpdateInventoryDto, AddStockDto, ReduceStockDto, ReleaseStockDto, ReserveStockDto, Roles, Public } from '@apps/common';
 import { lastValueFrom, timeout } from 'rxjs';
 import { CircuitBreakerService } from '@apps/common';
+import { IdempotencyInterceptor } from '../interceptors/idempotency.interceptor';
 
 @UseGuards(JwtBlacklistGuard)
+@UseInterceptors(IdempotencyInterceptor)
 @Controller('inventory')
 export class InventoryController implements OnModuleInit {
 

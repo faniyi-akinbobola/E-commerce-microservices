@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Patch, Inject, Param, Body, UseGuards, Req, OnModuleInit, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Patch, Inject, Param, Body, UseGuards, Req, OnModuleInit, Logger, ServiceUnavailableException, UseInterceptors } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { UpdateUserDto } from 'common/dtos/update-user.dto';
 import { JwtBlacklistGuard } from '../guards/jwt-blacklist.guard';
@@ -6,8 +6,11 @@ import { Roles } from '@apps/common';
 import { lastValueFrom } from 'rxjs';
 import { CircuitBreakerService } from '@apps/common';
 import { timeout } from 'rxjs/operators';
+import { IdempotencyInterceptor } from '../interceptors/idempotency.interceptor';
+
 
 @UseGuards(JwtBlacklistGuard)
+@UseInterceptors(IdempotencyInterceptor)
 @Controller('users')
 export class UsersController implements OnModuleInit{
 

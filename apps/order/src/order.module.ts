@@ -9,9 +9,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { OrderItem } from './entities/order-item.entity';
 import { Order } from './entities/order-entity';
 import * as joi from 'joi';
+import { IdempotencyModule } from '@apps/common';
+import { IdempotencyRequest } from 'common/entities/idempotency-request.entity';
+
 
 @Module({
-  imports: [
+  imports: [IdempotencyModule,
     CircuitBreakerModule,
     ConfigModule.forRoot({
       isGlobal: true,
@@ -88,7 +91,7 @@ import * as joi from 'joi';
         }),
       },
     ]),
-    TypeOrmModule.forFeature([OrderItem, Order])
+    TypeOrmModule.forFeature([OrderItem, Order, IdempotencyRequest])
   ],
   controllers: [OrderController],
   providers: [OrderService],

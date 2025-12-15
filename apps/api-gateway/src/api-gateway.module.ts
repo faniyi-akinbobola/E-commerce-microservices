@@ -22,9 +22,17 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './strategy/jwt.strategy';
 import { JwtBlacklistGuard } from './guards/jwt-blacklist.guard';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { RedisModule } from '@nestjs-modules/ioredis';
 
 @Module({
-  imports: [ 
+  imports: [ RedisModule.forRootAsync({
+    imports: [ConfigModule],
+    inject: [ConfigService],
+    useFactory: (configService: ConfigService)=>({
+      type: 'single',
+      url: configService.get<string>('REDIS_URL') || 'redis://localhost:6379',
+    })
+  }),
     CircuitBreakerModule,
     ThrottlerModule.forRoot([{
       ttl: 60000, // 60 seconds in milliseconds

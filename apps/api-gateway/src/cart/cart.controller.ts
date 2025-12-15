@@ -1,11 +1,13 @@
-import { Controller, Inject, Post, Get, Delete, Patch, Param, Body, UseGuards, Req, OnModuleInit, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { Controller, Inject, Post, Get, Delete, Patch, Param, Body, UseGuards, Req, OnModuleInit, Logger, ServiceUnavailableException, UseInterceptors } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { AddToCartDto, UpdateCartQuantityDto, RemoveCartItemDto } from '@apps/common';
 import { JwtBlacklistGuard } from '../guards/jwt-blacklist.guard';
 import { lastValueFrom, timeout } from 'rxjs';
 import { CircuitBreakerService } from '@apps/common';
+import { IdempotencyInterceptor } from '../interceptors/idempotency.interceptor';
 
 
+@UseInterceptors(IdempotencyInterceptor)
 @UseGuards(JwtBlacklistGuard)
 @Controller('cart')
 export class CartController implements OnModuleInit {

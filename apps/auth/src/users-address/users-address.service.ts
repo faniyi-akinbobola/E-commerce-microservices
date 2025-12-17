@@ -24,15 +24,16 @@ async createUserAddress(userId: string, dto: CreateUserAddressDto) {
       );
     }
 
+    const {password, ...userWithoutPassword} = user; 
     const address = this.userAddressRepository.create({
       ...dto,
-      user,
+      user: userWithoutPassword,
     });
     return this.userAddressRepository.save(address);
   }
 
   // ---------- GET ALL ----------
-  async findAll(userId: string) {
+  async getUserAddresses(userId: string) {
     return this.userAddressRepository.find({
       where: { user: { id: userId } },
       order: { isDefault: 'DESC', createdAt: 'DESC' },
@@ -40,7 +41,7 @@ async createUserAddress(userId: string, dto: CreateUserAddressDto) {
   }
 
   // ---------- GET ONE ----------
-  async findOne(addressId: string, userId?: string) {
+  async getUserAddressById(addressId: string, userId?: string) {
     const address = await this.userAddressRepository.findOne({
       where: { id: addressId },
       relations: ['user'],
@@ -55,8 +56,8 @@ async createUserAddress(userId: string, dto: CreateUserAddressDto) {
   }
 
   // ---------- UPDATE ----------
-  async update(addressId: string, userId: string, dto: UpdateUserAddressDto) {
-    const address = await this.findOne(addressId, userId);
+  async updateUserAddress(addressId: string, userId: string, dto: UpdateUserAddressDto) {
+    const address = await this.getUserAddressById(addressId, userId);
 
     // If marking as default, unset others
     if (dto.isDefault) {
@@ -71,8 +72,8 @@ async createUserAddress(userId: string, dto: CreateUserAddressDto) {
   }
 
   // ---------- DELETE ----------
-  async delete(addressId: string, userId: string) {
-    const address = await this.findOne(addressId, userId);
+  async deleteUserAddress(addressId: string, userId: string) {
+    const address = await this.getUserAddressById(addressId, userId);
 
     await this.userAddressRepository.remove(address);
 
@@ -93,7 +94,7 @@ async createUserAddress(userId: string, dto: CreateUserAddressDto) {
 
   // ---------- SET DEFAULT ----------
   async setDefault(addressId: string, userId: string) {
-    const address = await this.findOne(addressId, userId);
+    const address = await this.getUserAddressById(addressId, userId);
 
     // unset all other defaults
     await this.userAddressRepository.update(

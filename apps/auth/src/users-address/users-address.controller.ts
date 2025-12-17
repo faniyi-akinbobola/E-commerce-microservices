@@ -16,7 +16,8 @@ export class UsersAddressController {
 
   @MessagePattern({ cmd: 'get_user_addresses' })
   getUserAddresses(@Payload() data: { userId: string }) {
-    return this.usersAddressService.findAll(data.userId);
+    return this.usersAddressService.getUserAddresses(data.userId);
+
   }
 
   @MessagePattern({ cmd: 'update_user_address' })
@@ -24,18 +25,18 @@ export class UsersAddressController {
     @Payload() data: { id: string; userId: string; updateUserAddressDto: UpdateUserAddressDto }
   ) {
     const { id, userId, updateUserAddressDto } = data;
-    return this.usersAddressService.update(id, userId, updateUserAddressDto);
+    return this.usersAddressService.updateUserAddress(id, userId, updateUserAddressDto);
   }
 
   @MessagePattern({ cmd: 'delete_user_address' })
   deleteUserAddress(@Payload() data: { id: string; userId: string }) {
-    return this.usersAddressService.delete(data.id, data.userId);
+    return this.usersAddressService.deleteUserAddress(data.id, data.userId);
   }
 
   @MessagePattern({ cmd: 'get_user_address_by_id' })
   getUserAddressById(@Payload() data: { id: string; userId: string }) {
     console.log('[Auth/UsersAddress] 📥 Received get_user_address_by_id request:', JSON.stringify(data));
-    const result = this.usersAddressService.findOne(data.id, data.userId);
+    const result = this.usersAddressService.getUserAddressById(data.id, data.userId);
     console.log('[Auth/UsersAddress] 📤 Returning address result');
     return result;
   }

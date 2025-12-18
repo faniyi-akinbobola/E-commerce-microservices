@@ -1,10 +1,18 @@
-import { Injectable,Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Inventory } from './entities/inventory.entity';
 import { Repository, DataSource, In } from 'typeorm';
-import { CreateInventoryDto, UpdateInventoryDto, AddStockDto, ReduceStockDto, ReleaseStockDto, ReserveStockDto, IdempotencyService } from '@apps/common';
+import {
+  CreateInventoryDto,
+  UpdateInventoryDto,
+  AddStockDto,
+  ReduceStockDto,
+  ReleaseStockDto,
+  ReserveStockDto,
+  IdempotencyService,
+} from '@apps/common';
 import { RpcException } from '@nestjs/microservices';
-import { Product } from 'apps/product/src/entities/product.entity';
+import { Product } from '../../product/src/entities/product.entity';
 import { ObjectId } from 'mongodb';
 import { query } from 'express';
 import { QueryExpressionMap } from 'typeorm/query-builder/QueryExpressionMap';
@@ -14,11 +22,10 @@ import { queryObjects } from 'v8';
 export class InventoryService {
   private readonly logger = new Logger(InventoryService.name);
 
-
   constructor(
-    @InjectRepository(Inventory, 'default') 
+    @InjectRepository(Inventory, 'default')
     private inventoryRepository: Repository<Inventory>,
-    @InjectRepository(Product, 'mongodb') 
+    @InjectRepository(Product, 'mongodb')
     private productRepository: Repository<Product>,
     private readonly dataSource: DataSource, // For transactions and row locking
     private readonly idempotencyService: IdempotencyService, // Inject idempotency service
@@ -36,12 +43,12 @@ export class InventoryService {
         'inventory/addstock',
         addStockDto,
       );
-      
+
       if (idempotencyCheck.exists && idempotencyCheck.status === 'completed') {
         await queryRunner.release();
         return idempotencyCheck.data;
       }
-      
+
       if (idempotencyCheck.exists && idempotencyCheck.status === 'pending') {
         await queryRunner.release();
         throw new RpcException('Request is already being processed. Please wait.');
@@ -50,7 +57,7 @@ export class InventoryService {
       // Lock inventory row (PostgreSQL)
       const inventory = await queryRunner.manager.findOne(Inventory, {
         where: { productId: addStockDto.productId },
-        lock: { mode: 'pessimistic_write' }
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!inventory) {
@@ -66,15 +73,15 @@ export class InventoryService {
 
       // Update product in MongoDB (separate from transaction)
       const product = await this.productRepository.findOne({
-        where: { _id: new ObjectId(addStockDto.productId) } as any
+        where: { _id: new ObjectId(addStockDto.productId) } as any,
       });
-      
+
       if (!product) {
         await queryRunner.rollbackTransaction();
         await queryRunner.release();
         throw new RpcException('Product not found');
       }
-      
+
       product.stock += addStockDto.quantity;
       const addedStock = await this.productRepository.save(product);
 
@@ -84,14 +91,13 @@ export class InventoryService {
         'inventory/addstock',
         addStockDto,
         addedStock,
-        200
+        200,
       );
 
       await queryRunner.commitTransaction();
       await queryRunner.release();
 
       return addedStock;
-
     } catch (error) {
       await queryRunner.rollbackTransaction();
       await queryRunner.release();
@@ -100,9 +106,9 @@ export class InventoryService {
         idempotencyKey,
         'inventory-service',
         'inventory/addstock',
-        error.message || 'Failed to add stock.'
+        error.message || 'Failed to add stock.',
       );
-      
+
       throw error;
     }
   }
@@ -154,23 +160,27 @@ export class InventoryService {
       if (inventory.quantity < reduceStockDto.quantity) {
         await queryRunner.rollbackTransaction();
         await queryRunner.release();
-        throw new RpcException(`Insufficient stock. Available: ${inventory.quantity}, Requested: ${reduceStockDto.quantity}`);
+        throw new RpcException(
+          `Insufficient stock. Available: ${inventory.quantity}, Requested: ${reduceStockDto.quantity}`,
+        );
       }
 
       // ===== STEP 4: REDUCE STOCK (while holding the lock) =====
       inventory.quantity -= reduceStockDto.quantity;
       inventory.updatedAt = new Date();
-      
+
       // Save the updated inventory within the transaction
       await queryRunner.manager.save(Inventory, inventory);
-      
-      this.logger.log(`Stock reduced for product ${reduceStockDto.productId}: ${reduceStockDto.quantity} units`);
+
+      this.logger.log(
+        `Stock reduced for product ${reduceStockDto.productId}: ${reduceStockDto.quantity} units`,
+      );
 
       // ===== STEP 5: UPDATE PRODUCT COLLECTION (MongoDB) =====
       // Note: MongoDB doesn't support the same transaction as PostgreSQL
       // For production, consider using MongoDB transactions or saga pattern
       const product = await this.productRepository.findOne({
-        where: { _id: new ObjectId(reduceStockDto.productId) } as any
+        where: { _id: new ObjectId(reduceStockDto.productId) } as any,
       });
 
       if (!product) {
@@ -203,7 +213,6 @@ export class InventoryService {
       await queryRunner.release();
 
       return updatedProduct;
-
     } catch (error) {
       // ===== ROLLBACK ON ERROR (releases the lock) =====
       await queryRunner.rollbackTransaction();
@@ -223,23 +232,23 @@ export class InventoryService {
   }
 
   async getAvailableProducts(): Promise<Product[]> {
-    const inventory = await this.inventoryRepository.find({where: {isActive: true}});
-    
+    const inventory = await this.inventoryRepository.find({ where: { isActive: true } });
+
     if (!inventory || inventory.length === 0) {
       return [];
     }
-    
-    const productIds = inventory
-      .map(inv => inv.productId)
-      .filter(id => id && id.length === 24); // Filter valid MongoDB ObjectId strings
-    
+
+    const productIds = inventory.map((inv) => inv.productId).filter((id) => id && id.length === 24); // Filter valid MongoDB ObjectId strings
+
     if (productIds.length === 0) {
       return [];
     }
-    
+
     try {
-      const objectIds = productIds.map(id => new ObjectId(id));
-      const products = await this.productRepository.find({where: { _id: { $in: objectIds } } as any});
+      const objectIds = productIds.map((id) => new ObjectId(id));
+      const products = await this.productRepository.find({
+        where: { _id: { $in: objectIds } } as any,
+      });
       return products || [];
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -247,8 +256,8 @@ export class InventoryService {
     }
   }
 
-  async getInventoryForProduct(id : string): Promise<Inventory>  {
-    const inventory = await this.inventoryRepository.findOne({where: {productId: id}});
+  async getInventoryForProduct(id: string): Promise<Inventory> {
+    const inventory = await this.inventoryRepository.findOne({ where: { productId: id } });
     if (!inventory) {
       throw new RpcException('Inventory not found for this product');
     }
@@ -265,7 +274,7 @@ export class InventoryService {
         idempotencyKey,
         'inventory-service',
         'inventory/releaseStock',
-        releaseStockDto
+        releaseStockDto,
       );
 
       if (idempotencyCheck.exists && idempotencyCheck.status === 'completed') {
@@ -278,9 +287,9 @@ export class InventoryService {
         throw new RpcException('Request is already being processed. Please wait.');
       }
 
-      const inventory = await queryRunner.manager.findOne(Inventory, { 
+      const inventory = await queryRunner.manager.findOne(Inventory, {
         where: { productId: releaseStockDto.productId },
-        lock: { mode: 'pessimistic_write' }
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!inventory) {
@@ -307,14 +316,13 @@ export class InventoryService {
         'inventory/releaseStock',
         releaseStockDto,
         savedInventory,
-        200
+        200,
       );
 
       await queryRunner.commitTransaction();
       await queryRunner.release();
 
       return savedInventory;
-      
     } catch (error) {
       await queryRunner.rollbackTransaction();
       await queryRunner.release();
@@ -323,7 +331,7 @@ export class InventoryService {
         idempotencyKey,
         'inventory-service',
         'inventory/releaseStock',
-        error.message || 'Failed to release stock'
+        error.message || 'Failed to release stock',
       );
 
       throw error;
@@ -340,7 +348,7 @@ export class InventoryService {
         idempotencyKey,
         'inventory-service',
         'inventory/reserveStock',
-        reserveStockDto
+        reserveStockDto,
       );
 
       if (idempotencyCheck.exists && idempotencyCheck.status === 'completed') {
@@ -353,9 +361,9 @@ export class InventoryService {
         throw new RpcException('Request is already being processed. Please wait.');
       }
 
-      const inventory = await queryRunner.manager.findOne(Inventory, { 
+      const inventory = await queryRunner.manager.findOne(Inventory, {
         where: { productId: reserveStockDto.productId },
-        lock: { mode: 'pessimistic_write' }
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!inventory) {
@@ -382,14 +390,13 @@ export class InventoryService {
         'inventory/reserveStock',
         reserveStockDto,
         reservedStock,
-        200
+        200,
       );
 
       await queryRunner.commitTransaction();
       await queryRunner.release();
 
       return reservedStock;
-
     } catch (error) {
       await queryRunner.rollbackTransaction();
       await queryRunner.release();
@@ -398,14 +405,18 @@ export class InventoryService {
         idempotencyKey,
         'inventory-service',
         'inventory/reserveStock',
-        error.message || 'Failed to reserve stock.'
+        error.message || 'Failed to reserve stock.',
       );
 
       throw error;
     }
   }
 
-  async updateInventory(productId: string, updateInventoryDto: UpdateInventoryDto, idempotencyKey: string): Promise<Inventory> {
+  async updateInventory(
+    productId: string,
+    updateInventoryDto: UpdateInventoryDto,
+    idempotencyKey: string,
+  ): Promise<Inventory> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -415,7 +426,7 @@ export class InventoryService {
         idempotencyKey,
         'inventory-service',
         'inventory/updateInventory',
-        updateInventoryDto
+        updateInventoryDto,
       );
 
       if (idempotencyCheck.exists && idempotencyCheck.status === 'completed') {
@@ -430,7 +441,7 @@ export class InventoryService {
 
       const inventory = await queryRunner.manager.findOne(Inventory, {
         where: { productId },
-        lock: { mode: 'pessimistic_write' }
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!inventory) {
@@ -449,14 +460,13 @@ export class InventoryService {
         'inventory/updateInventory',
         updateInventoryDto,
         updatedInventory,
-        200
+        200,
       );
 
       await queryRunner.commitTransaction();
       await queryRunner.release();
 
       return updatedInventory;
-
     } catch (error) {
       await queryRunner.rollbackTransaction();
       await queryRunner.release();
@@ -465,14 +475,17 @@ export class InventoryService {
         idempotencyKey,
         'inventory-service',
         'inventory/updateInventory',
-        error.message || 'Failed to update inventory.'
+        error.message || 'Failed to update inventory.',
       );
 
       throw error;
     }
   }
 
-  async createInventory(createInventoryDto: CreateInventoryDto, idempotencyKey: string): Promise<Inventory> {
+  async createInventory(
+    createInventoryDto: CreateInventoryDto,
+    idempotencyKey: string,
+  ): Promise<Inventory> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -482,7 +495,7 @@ export class InventoryService {
         idempotencyKey,
         'inventory-service',
         'inventory/createInventory',
-        createInventoryDto
+        createInventoryDto,
       );
 
       if (idempotencyCheck.exists && idempotencyCheck.status === 'completed') {
@@ -495,9 +508,9 @@ export class InventoryService {
         throw new RpcException('Request is already being processed. Please wait.');
       }
 
-      const inventory = await queryRunner.manager.findOne(Inventory, { 
+      const inventory = await queryRunner.manager.findOne(Inventory, {
         where: { productId: createInventoryDto.productId },
-        lock: { mode: 'pessimistic_write' }
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (inventory) {
@@ -520,14 +533,13 @@ export class InventoryService {
         'inventory/createInventory',
         createInventoryDto,
         newInventoryCreated,
-        200
+        200,
       );
 
       await queryRunner.commitTransaction();
       await queryRunner.release();
 
       return newInventoryCreated;
-
     } catch (error) {
       await queryRunner.rollbackTransaction();
       await queryRunner.release();
@@ -536,11 +548,10 @@ export class InventoryService {
         idempotencyKey,
         'inventory-service',
         'inventory/createInventory',
-        error.message || 'Failed to create inventory.'
+        error.message || 'Failed to create inventory.',
       );
 
       throw error;
     }
   }
-
 }

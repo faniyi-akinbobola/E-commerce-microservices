@@ -4,13 +4,12 @@ import { OrderService } from './order.service';
 import { DatabaseModule } from './database/database.module';
 import { ClientsModule, Transport, ClientProxy } from '@nestjs/microservices';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { QUEUES, CircuitBreakerModule } from '@apps/common';
+import { QUEUES, CircuitBreakerModule, IdempotencyRequest } from '@apps/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OrderItem } from './entities/order-item.entity';
 import { Order } from './entities/order-entity';
 import * as joi from 'joi';
 import { IdempotencyModule } from '@apps/common';
-import { IdempotencyRequest } from 'common/entities/idempotency-request.entity';
 
 
 @Module({

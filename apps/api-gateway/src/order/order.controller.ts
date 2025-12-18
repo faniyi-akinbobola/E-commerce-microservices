@@ -1,9 +1,29 @@
-import { Controller, Post, Get, Patch, Body, Param, Inject, UseGuards, Req, OnModuleInit, Logger, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Body,
+  Param,
+  Inject,
+  UseGuards,
+  Req,
+  OnModuleInit,
+  Logger,
+  UseInterceptors,
+} from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { CreateOrderDto, UpdateOrderStatusDto, CancelOrderDto, AddPaymentRecordDto, CircuitBreakerService } from '@apps/common';
+import {
+  CreateOrderDto,
+  UpdateOrderStatusDto,
+  CancelOrderDto,
+  AddPaymentRecordDto,
+  CircuitBreakerService,
+} from '@apps/common';
 import { lastValueFrom, timeout } from 'rxjs';
 import { JwtBlacklistGuard } from '../guards/jwt-blacklist.guard';
 import { IdempotencyInterceptor } from '../interceptors/idempotency.interceptor';
+import { randomUUID } from 'crypto';
 
 @UseInterceptors(IdempotencyInterceptor)
 @UseGuards(JwtBlacklistGuard)
@@ -34,7 +54,7 @@ export class OrderController implements OnModuleInit {
     this.createOrderCircuit = this.circuitBreakerService.createCircuitBreaker(
       async (data: any) => {
         return await lastValueFrom(
-          this.orderClient.send({ cmd: 'create_order' }, data).pipe(timeout(10000))
+          this.orderClient.send({ cmd: 'create_order' }, data).pipe(timeout(10000)),
         );
       },
       {
@@ -42,7 +62,7 @@ export class OrderController implements OnModuleInit {
         errorThresholdPercentage: 50,
         resetTimeout: 30000,
         name: 'order_create',
-      }
+      },
     );
 
     this.createOrderCircuit.fallback(() => {
@@ -53,7 +73,7 @@ export class OrderController implements OnModuleInit {
     this.getUserOrdersCircuit = this.circuitBreakerService.createCircuitBreaker(
       async (userId: string) => {
         return await lastValueFrom(
-          this.orderClient.send({ cmd: 'get_user_orders' }, userId).pipe(timeout(5000))
+          this.orderClient.send({ cmd: 'get_user_orders' }, userId).pipe(timeout(5000)),
         );
       },
       {
@@ -61,18 +81,20 @@ export class OrderController implements OnModuleInit {
         errorThresholdPercentage: 50,
         resetTimeout: 30000,
         name: 'order_get_user_orders',
-      }
+      },
     );
 
     this.getUserOrdersCircuit.fallback(() => {
-      throw new Error('Order retrieval service is temporarily unavailable. Please try again later.');
+      throw new Error(
+        'Order retrieval service is temporarily unavailable. Please try again later.',
+      );
     });
 
     // Get all orders circuit breaker
     this.getAllOrdersCircuit = this.circuitBreakerService.createCircuitBreaker(
       async () => {
         return await lastValueFrom(
-          this.orderClient.send({ cmd: 'get_all_orders' }, {}).pipe(timeout(5000))
+          this.orderClient.send({ cmd: 'get_all_orders' }, {}).pipe(timeout(5000)),
         );
       },
       {
@@ -80,18 +102,20 @@ export class OrderController implements OnModuleInit {
         errorThresholdPercentage: 50,
         resetTimeout: 30000,
         name: 'order_get_all_orders',
-      }
+      },
     );
 
     this.getAllOrdersCircuit.fallback(() => {
-      throw new Error('Order retrieval service is temporarily unavailable. Please try again later.');
+      throw new Error(
+        'Order retrieval service is temporarily unavailable. Please try again later.',
+      );
     });
 
     // Get order by ID circuit breaker
     this.getOrderByIdCircuit = this.circuitBreakerService.createCircuitBreaker(
       async (id: string) => {
         return await lastValueFrom(
-          this.orderClient.send({ cmd: 'get_order_by_id' }, id).pipe(timeout(5000))
+          this.orderClient.send({ cmd: 'get_order_by_id' }, id).pipe(timeout(5000)),
         );
       },
       {
@@ -99,18 +123,20 @@ export class OrderController implements OnModuleInit {
         errorThresholdPercentage: 50,
         resetTimeout: 30000,
         name: 'order_get_by_id',
-      }
+      },
     );
 
     this.getOrderByIdCircuit.fallback(() => {
-      throw new Error('Order retrieval service is temporarily unavailable. Please try again later.');
+      throw new Error(
+        'Order retrieval service is temporarily unavailable. Please try again later.',
+      );
     });
 
     // Cancel order circuit breaker
     this.cancelOrderCircuit = this.circuitBreakerService.createCircuitBreaker(
       async (data: any) => {
         return await lastValueFrom(
-          this.orderClient.send({ cmd: 'cancel_order' }, data).pipe(timeout(5000))
+          this.orderClient.send({ cmd: 'cancel_order' }, data).pipe(timeout(5000)),
         );
       },
       {
@@ -118,18 +144,20 @@ export class OrderController implements OnModuleInit {
         errorThresholdPercentage: 50,
         resetTimeout: 30000,
         name: 'order_cancel',
-      }
+      },
     );
 
     this.cancelOrderCircuit.fallback(() => {
-      throw new Error('Order cancellation service is temporarily unavailable. Please try again later.');
+      throw new Error(
+        'Order cancellation service is temporarily unavailable. Please try again later.',
+      );
     });
 
     // Update order status circuit breaker
     this.updateOrderStatusCircuit = this.circuitBreakerService.createCircuitBreaker(
       async (data: any) => {
         return await lastValueFrom(
-          this.orderClient.send({ cmd: 'update_order_status' }, data).pipe(timeout(5000))
+          this.orderClient.send({ cmd: 'update_order_status' }, data).pipe(timeout(5000)),
         );
       },
       {
@@ -137,18 +165,20 @@ export class OrderController implements OnModuleInit {
         errorThresholdPercentage: 50,
         resetTimeout: 30000,
         name: 'order_update_status',
-      }
+      },
     );
 
     this.updateOrderStatusCircuit.fallback(() => {
-      throw new Error('Order status update service is temporarily unavailable. Please try again later.');
+      throw new Error(
+        'Order status update service is temporarily unavailable. Please try again later.',
+      );
     });
 
     // Add payment record circuit breaker
     this.addPaymentRecordCircuit = this.circuitBreakerService.createCircuitBreaker(
       async (data: any) => {
         return await lastValueFrom(
-          this.orderClient.send({ cmd: 'add_payment_record' }, data).pipe(timeout(10000))
+          this.orderClient.send({ cmd: 'add_payment_record' }, data).pipe(timeout(10000)),
         );
       },
       {
@@ -156,7 +186,7 @@ export class OrderController implements OnModuleInit {
         errorThresholdPercentage: 50,
         resetTimeout: 30000,
         name: 'order_add_payment',
-      }
+      },
     );
 
     this.addPaymentRecordCircuit.fallback(() => {
@@ -170,11 +200,12 @@ export class OrderController implements OnModuleInit {
   async createOrder(@Req() req, @Body() createOrderDto: CreateOrderDto) {
     try {
       const userId = req.user.userId;
-      const idempotencyKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'];
-      return await this.createOrderCircuit.fire({ 
-        userId, 
-        dto: createOrderDto, 
-        idempotencyKey 
+      const idempotencyKey =
+        req.headers['idempotency-key'] || req.headers['x-idempotency-key'] || randomUUID();
+      return await this.createOrderCircuit.fire({
+        userId,
+        dto: createOrderDto,
+        idempotencyKey,
       });
     } catch (error) {
       this.logger.error(`Create order failed: ${error.message}`);
@@ -218,10 +249,10 @@ export class OrderController implements OnModuleInit {
     try {
       const userId = req.user.userId;
       const idempotencyKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'];
-      return await this.cancelOrderCircuit.fire({ 
-        userId, 
-        dto: { orderId, userId }, 
-        idempotencyKey 
+      return await this.cancelOrderCircuit.fire({
+        userId,
+        dto: { orderId, userId },
+        idempotencyKey,
       });
     } catch (error) {
       this.logger.error(`Cancel order failed: ${error.message}`);
@@ -230,13 +261,17 @@ export class OrderController implements OnModuleInit {
   }
 
   @Patch(':id/status')
-  async updateOrderStatus(@Req() req, @Param('id') orderId: string, @Body() updateDto: { status: string }) {
+  async updateOrderStatus(
+    @Req() req,
+    @Param('id') orderId: string,
+    @Body() updateDto: { status: string },
+  ) {
     try {
       const idempotencyKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'];
-      return await this.updateOrderStatusCircuit.fire({ 
-        orderId, 
-        status: updateDto.status, 
-        idempotencyKey 
+      return await this.updateOrderStatusCircuit.fire({
+        orderId,
+        status: updateDto.status,
+        idempotencyKey,
       });
     } catch (error) {
       this.logger.error(`Update order status failed: ${error.message}`);
@@ -254,4 +289,3 @@ export class OrderController implements OnModuleInit {
     }
   }
 }
-

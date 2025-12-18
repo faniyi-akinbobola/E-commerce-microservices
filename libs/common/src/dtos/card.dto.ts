@@ -1,23 +1,26 @@
-import { IsCreditCard, IsNumber, IsString } from "class-validator";
-import { Stripe } from "stripe";
+import { IsCreditCard, IsNumber, IsString, IsOptional } from 'class-validator';
+import { Stripe } from 'stripe';
 
-export class CardDto{
+export class CardDto {
+  @IsOptional()
+  @IsString()
+  cvc?: string;
 
-    @IsString()
-    cvc?: string;
+  @IsOptional()
+  @IsNumber()
+  exp_month?: number;
 
-    @IsNumber()
-    exp_month?: number;
+  @IsOptional()
+  @IsNumber()
+  exp_year?: number;
 
+  networks?: Stripe.PaymentMethodCreateParams.Card.Networks;
 
-    @IsNumber()
-    exp_year?: number;
+  @IsOptional()
+  @IsCreditCard()
+  number?: string;
 
-    networks?: Stripe.PaymentMethodCreateParams.Card.Networks;
-
-    @IsCreditCard()
-    number?: string;
-
-    @IsString()
-    token?: string;
+  @IsOptional()
+  @IsString()
+  token?: string;
 }

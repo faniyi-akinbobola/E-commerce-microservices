@@ -179,6 +179,11 @@ services:
     environment:
       REDIS_URL: redis://redis:6379
       RabbitMQ_URL: amqp://guest:guest@rabbitmq:5672
+      DB_HOST: cart-db
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      DB_DATABASE: cart_db
     env_file:
       - .env
     depends_on:
@@ -186,9 +191,23 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      cart-db:
+        condition: service_started
     # Uncomment if you want to expose a port for debugging
     # ports:
     #   - "3005:3005"
+
+  cart-db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cart_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - cart-db-data:/var/lib/postgresql/data
 
   order-service:
     build:
@@ -235,4 +254,5 @@ volumes:
   product-db-data:
   inventory-db-data:
   order-db-data:
+  cart-db-data:
   redis-data:

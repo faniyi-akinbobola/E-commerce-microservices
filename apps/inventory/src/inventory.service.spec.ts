@@ -16,7 +16,7 @@ describe('InventoryService', () => {
 
   const mockInventory = {
     id: 'inventory-1',
-    productId: 'product-1',
+    productId: new ObjectId().toString(), // Use valid MongoDB ObjectId
     quantity: 100,
     reserved: 0,
     available: 100,
@@ -105,24 +105,41 @@ describe('InventoryService', () => {
 
   describe('createInventory', () => {
     it('should create inventory for a product', async () => {
+      const validProductId = new ObjectId().toString();
       const dto = {
-        productId: 'product-1',
+        productId: validProductId,
         quantity: 100,
       };
 
+      const response = {
+        statusCode: 201,
+        timestamp: new Date().toISOString(),
+        data: {
+          ...mockInventory,
+          productId: validProductId,
+          productName: 'Test Product',
+        },
+      };
+
       mockQueryRunner.manager.findOne.mockResolvedValue(null);
-      mockQueryRunner.manager.save.mockResolvedValue(mockInventory as any);
+      mockQueryRunner.manager.save.mockResolvedValue({
+        ...mockInventory,
+        productId: validProductId,
+      } as any);
+      mockProductRepository.findOne.mockResolvedValue({ name: 'Test Product' } as any);
       mockIdempotencyService.markCompleted.mockResolvedValue(undefined);
 
       const result = await service.createInventory(dto as any, 'idempotency-key');
 
       expect(mockQueryRunner.manager.save).toHaveBeenCalled();
-      expect(result).toEqual(mockInventory);
+      expect(result.statusCode).toBe(201);
+      expect(result.data.productId).toBe(validProductId);
     });
 
     it('should throw error if inventory already exists', async () => {
+      const validProductId = new ObjectId().toString();
       const dto = {
-        productId: 'product-1',
+        productId: validProductId,
         quantity: 100,
       };
 
@@ -136,44 +153,63 @@ describe('InventoryService', () => {
 
   describe('getInventoryForProduct', () => {
     it('should retrieve inventory for a product', async () => {
-      mockInventoryRepository.findOne.mockResolvedValue(mockInventory as any);
+      const validProductId = new ObjectId().toString();
+      const mockInventoryWithValidId = {
+        ...mockInventory,
+        productId: validProductId,
+      };
 
-      const result = await service.getInventoryForProduct('product-1');
+      mockInventoryRepository.findOne.mockResolvedValue(mockInventoryWithValidId as any);
+      mockProductRepository.findOne.mockResolvedValue({ name: 'Test Product' } as any);
+
+      const result = await service.getInventoryForProduct(validProductId);
 
       expect(mockInventoryRepository.findOne).toHaveBeenCalledWith({
-        where: { productId: 'product-1' },
+        where: { productId: validProductId },
       });
-      expect(result).toEqual(mockInventory);
+      expect(result.statusCode).toBe(200);
+      expect(result.data.productId).toBe(validProductId);
+      expect(result.data.productName).toBe('Test Product');
     });
 
     it('should throw error if inventory not found', async () => {
+      const validProductId = new ObjectId().toString();
       mockInventoryRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.getInventoryForProduct('product-999')).rejects.toThrow(RpcException);
+      await expect(service.getInventoryForProduct(validProductId)).rejects.toThrow(RpcException);
     });
   });
 
   describe('updateInventory', () => {
     it('should update inventory quantity', async () => {
+      const validProductId = new ObjectId().toString();
       const dto = {
         quantity: 150,
       };
 
-      mockQueryRunner.manager.findOne.mockResolvedValue(mockInventory as any);
-      mockQueryRunner.manager.save.mockResolvedValue({
+      const mockInventoryWithValidId = {
         ...mockInventory,
+        productId: validProductId,
+      };
+
+      mockQueryRunner.manager.findOne.mockResolvedValue(mockInventoryWithValidId as any);
+      mockQueryRunner.manager.save.mockResolvedValue({
+        ...mockInventoryWithValidId,
         quantity: 150,
         available: 150,
       } as any);
+      mockProductRepository.findOne.mockResolvedValue({ name: 'Test Product' } as any);
       mockIdempotencyService.markCompleted.mockResolvedValue(undefined);
 
-      const result = await service.updateInventory('product-1', dto as any, 'idempotency-key');
+      const result = await service.updateInventory(validProductId, dto as any, 'idempotency-key');
 
       expect(mockQueryRunner.manager.save).toHaveBeenCalled();
-      expect(result.quantity).toBe(150);
+      expect(result.statusCode).toBe(200);
+      expect(result.data.quantity).toBe(150);
     });
 
     it('should throw error if inventory not found', async () => {
+      const validProductId = new ObjectId().toString();
       const dto = {
         quantity: 150,
       };
@@ -181,7 +217,7 @@ describe('InventoryService', () => {
       mockQueryRunner.manager.findOne.mockResolvedValue(null);
 
       await expect(
-        service.updateInventory('product-999', dto as any, 'idempotency-key'),
+        service.updateInventory(validProductId, dto as any, 'idempotency-key'),
       ).rejects.toThrow(RpcException);
     });
   });
@@ -201,21 +237,30 @@ describe('InventoryService', () => {
         stock: 100,
       };
 
-      const mockProductAfterUpdate = {
-        ...mockProduct,
-        stock: 150,
+      const mockInventoryWithStock = {
+        ...mockInventory,
+        productId: validProductId,
+        quantity: 150,
       };
 
-      mockQueryRunner.manager.findOne.mockResolvedValueOnce(mockInventory as any);
+      mockQueryRunner.manager.findOne.mockResolvedValueOnce({
+        ...mockInventory,
+        productId: validProductId,
+      } as any);
       mockProductRepository.findOne.mockResolvedValue(mockProduct as any);
-      mockProductRepository.save.mockResolvedValue(mockProductAfterUpdate as any);
-      mockQueryRunner.manager.save.mockResolvedValue(mockInventory as any);
+      mockProductRepository.save.mockResolvedValue({
+        ...mockProduct,
+        stock: 150,
+      } as any);
+      mockQueryRunner.manager.save.mockResolvedValue(mockInventoryWithStock as any);
       mockIdempotencyService.markCompleted.mockResolvedValue(undefined);
 
       const result = await service.addStock(dto as any, 'idempotency-key');
 
       expect(mockProductRepository.save).toHaveBeenCalled();
-      expect(result).toEqual(mockProductAfterUpdate);
+      expect(result.statusCode).toBe(200);
+      expect(result.data.quantity).toBe(150);
+      expect(result.data.productName).toBe('Test Product');
     });
   });
 
@@ -242,21 +287,26 @@ describe('InventoryService', () => {
         stock: 200,
       };
 
-      const mockProductAfterReduce = {
-        ...mockProduct,
-        stock: 180,
+      const mockInventoryAfterReduce = {
+        ...mockInventoryWithStock,
+        quantity: 180,
       };
 
       mockQueryRunner.manager.findOne.mockResolvedValueOnce(mockInventoryWithStock as any);
       mockProductRepository.findOne.mockResolvedValue(mockProduct as any);
-      mockProductRepository.save.mockResolvedValue(mockProductAfterReduce as any);
-      mockQueryRunner.manager.save.mockResolvedValue(mockInventoryWithStock as any);
+      mockProductRepository.save.mockResolvedValue({
+        ...mockProduct,
+        stock: 180,
+      } as any);
+      mockQueryRunner.manager.save.mockResolvedValue(mockInventoryAfterReduce as any);
       mockIdempotencyService.markCompleted.mockResolvedValue(undefined);
 
       const result = await service.reduceStock(dto as any, 'idempotency-key');
 
       expect(mockProductRepository.save).toHaveBeenCalled();
-      expect(result).toEqual(mockProductAfterReduce);
+      expect(result.statusCode).toBe(200);
+      expect(result.data.quantity).toBe(180);
+      expect(result.data.productName).toBe('Test Product');
     });
 
     it('should throw error if insufficient stock', async () => {
@@ -290,6 +340,8 @@ describe('InventoryService', () => {
           ...mockInventory,
           productId: mockProductIdObjectId.toString(),
           isActive: true,
+          quantity: 100,
+          reserved: 10,
         },
       ];
       const mockProducts = [
@@ -297,6 +349,7 @@ describe('InventoryService', () => {
           _id: mockProductIdObjectId,
           name: 'Test Product',
           price: 100,
+          stock: 100,
         },
       ];
 
@@ -307,7 +360,9 @@ describe('InventoryService', () => {
 
       expect(mockInventoryRepository.find).toHaveBeenCalledWith({ where: { isActive: true } });
       expect(mockProductRepository.find).toHaveBeenCalled();
-      expect(result).toEqual(mockProducts);
+      expect(result).toBeInstanceOf(Array);
+      expect(result.length).toBe(1);
+      expect(result[0].stock).toBe(90); // quantity - reserved = 100 - 10
     });
   });
 });

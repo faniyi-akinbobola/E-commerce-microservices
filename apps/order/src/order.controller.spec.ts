@@ -158,17 +158,4 @@ describe('OrderController', () => {
       });
     });
   });
-
-  describe('addPaymentRecord', () => {
-    it('should add a payment record', () => {
-      const dto = {
-        orderId: 'order1',
-        amount: 100,
-        paymentMethod: 'CREDIT_CARD',
-        transactionId: 'txn-123',
-        paymentStatus: 'SUCCESS',
-      };
-      expect(orderController.addPaymentRecord(dto)).toEqual({ dto });
-    });
-  });
 });

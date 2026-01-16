@@ -29,8 +29,8 @@ export class PaymentService implements OnModuleInit {
   private initializeCircuitBreaker() {
     // Circuit breaker for Stripe API calls
     this.stripeCircuit = this.circuitBreakerService.createCircuitBreaker(
-      async (paymentData: any) => {
-        return await this.stripe.paymentIntents.create(paymentData);
+      async ({ paymentData, options }: { paymentData: any; options?: any }) => {
+        return await this.stripe.paymentIntents.create(paymentData, options);
       },
       {
         timeout: 12000, // 12 seconds (slightly longer than Stripe's 10s timeout)
@@ -68,17 +68,22 @@ export class PaymentService implements OnModuleInit {
         metadata: {
           ...metadata,
           userId,
-          // Store for tracking
+          idempotencyKey, // Store for tracking in metadata
         },
         automatic_payment_methods: {
           enabled: true,
           allow_redirects: 'never',
         },
-        idempotencyKey, // Store for tracking
       };
 
+      // Prepare Stripe request options with idempotency key
+      const stripeOptions = idempotencyKey ? { idempotencyKey } : undefined;
+
       // Call Stripe through circuit breaker
-      const paymentIntent = await this.stripeCircuit.fire(paymentIntentData);
+      const paymentIntent = await this.stripeCircuit.fire({
+        paymentData: paymentIntentData,
+        options: stripeOptions,
+      });
 
       this.logger.log(`Payment intent created successfully: ${paymentIntent.id}`);
 

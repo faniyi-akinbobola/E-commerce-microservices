@@ -24,8 +24,8 @@ export class IdempotencyService {
     requestBody?: any,
   ): Promise<{ exists: boolean; data?: any; status?: string }> {
     const existing = await this.idempotencyRepo.findOne({
-      where: { 
-        idempotencyKey: key, 
+      where: {
+        idempotencyKey: key,
         serviceName,
         endpoint,
       },
@@ -51,8 +51,8 @@ export class IdempotencyService {
     // Request exists - check status
     if (existing.status === 'completed') {
       this.logger.log(`Idempotent request detected: ${key} - returning cached response`);
-      return { 
-        exists: true, 
+      return {
+        exists: true,
         data: existing.responseData,
         status: 'completed',
       };
@@ -60,8 +60,8 @@ export class IdempotencyService {
 
     if (existing.status === 'pending') {
       this.logger.warn(`Duplicate concurrent request detected: ${key}`);
-      return { 
-        exists: true, 
+      return {
+        exists: true,
         status: 'pending',
       };
     }
@@ -69,10 +69,7 @@ export class IdempotencyService {
     if (existing.status === 'failed') {
       this.logger.log(`Retrying failed request: ${key}`);
       // Allow retry for failed requests
-      await this.idempotencyRepo.update(
-        { id: existing.id },
-        { status: 'pending' },
-      );
+      await this.idempotencyRepo.update({ id: existing.id }, { status: 'pending' });
       return { exists: false };
     }
 
@@ -86,23 +83,23 @@ export class IdempotencyService {
     key: string,
     serviceName: string,
     endpoint: string,
-    responseData: any,
+    requestPayload: any,
     result: any,
     statusCode?: number,
   ): Promise<void> {
     await this.idempotencyRepo.update(
-      { 
-        idempotencyKey: key, 
+      {
+        idempotencyKey: key,
         serviceName,
         endpoint,
       },
       {
-        responseData,
+        responseData: result, // Store the actual response, not the request payload
         statusCode,
         status: 'completed',
       },
     );
-    
+
     this.logger.log(`Idempotency request marked as completed: ${key}`);
   }
 
@@ -116,8 +113,8 @@ export class IdempotencyService {
     errorMessage: string,
   ): Promise<void> {
     await this.idempotencyRepo.update(
-      { 
-        idempotencyKey: key, 
+      {
+        idempotencyKey: key,
         serviceName,
         endpoint,
       },
@@ -126,7 +123,7 @@ export class IdempotencyService {
         errorMessage,
       },
     );
-    
+
     this.logger.error(`Idempotency request marked as failed: ${key}`);
   }
 

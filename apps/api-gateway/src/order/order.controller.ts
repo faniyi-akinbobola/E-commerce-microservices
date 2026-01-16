@@ -17,7 +17,6 @@ import {
   CreateOrderDto,
   UpdateOrderStatusDto,
   CancelOrderDto,
-  AddPaymentRecordDto,
   CircuitBreakerService,
 } from '@apps/common';
 import { lastValueFrom, timeout } from 'rxjs';
@@ -27,7 +26,7 @@ import { randomUUID } from 'crypto';
 
 @UseInterceptors(IdempotencyInterceptor)
 @UseGuards(JwtBlacklistGuard)
-@Controller('orders')
+@Controller({ path: 'orders', version: '1' })
 export class OrderController implements OnModuleInit {
   private readonly logger = new Logger(OrderController.name);
 
@@ -38,7 +37,6 @@ export class OrderController implements OnModuleInit {
   private getOrderByIdCircuit;
   private cancelOrderCircuit;
   private updateOrderStatusCircuit;
-  private addPaymentRecordCircuit;
 
   constructor(
     @Inject('ORDER_SERVICE') private readonly orderClient: ClientProxy,
@@ -174,25 +172,6 @@ export class OrderController implements OnModuleInit {
       );
     });
 
-    // Add payment record circuit breaker
-    this.addPaymentRecordCircuit = this.circuitBreakerService.createCircuitBreaker(
-      async (data: any) => {
-        return await lastValueFrom(
-          this.orderClient.send({ cmd: 'add_payment_record' }, data).pipe(timeout(10000)),
-        );
-      },
-      {
-        timeout: 10000,
-        errorThresholdPercentage: 50,
-        resetTimeout: 30000,
-        name: 'order_add_payment',
-      },
-    );
-
-    this.addPaymentRecordCircuit.fallback(() => {
-      throw new Error('Payment record service is temporarily unavailable. Please try again later.');
-    });
-
     this.logger.log('All order circuit breakers initialized');
   }
 
@@ -269,22 +248,14 @@ export class OrderController implements OnModuleInit {
     try {
       const idempotencyKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'];
       return await this.updateOrderStatusCircuit.fire({
-        orderId,
-        status: updateDto.status,
+        dto: {
+          orderId,
+          status: updateDto.status,
+        },
         idempotencyKey,
       });
     } catch (error) {
       this.logger.error(`Update order status failed: ${error.message}`);
-      throw error;
-    }
-  }
-
-  @Post(':id/payment')
-  async addPaymentRecord(@Param('id') orderId: string, @Body() paymentDto: AddPaymentRecordDto) {
-    try {
-      return await this.addPaymentRecordCircuit.fire({ ...paymentDto, orderId });
-    } catch (error) {
-      this.logger.error(`Add payment record failed: ${error.message}`);
       throw error;
     }
   }

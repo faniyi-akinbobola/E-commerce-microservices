@@ -10,96 +10,125 @@ import { RpcExceptionFilterMicroservice } from '@apps/common';
 import { randomBytes } from 'crypto';
 import { Blacklist } from '../blacklist/blacklist.entity';
 
-
 @Injectable()
 export class UsersService {
+  constructor(
+    @InjectRepository(User) private readonly userRepository: Repository<User>,
+    @InjectRepository(Blacklist) private readonly blacklistRepository: Repository<Blacklist>,
+  ) {}
 
-    constructor(
-        @InjectRepository(User) private readonly userRepository: Repository<User>,
-        @InjectRepository(Blacklist) private readonly blacklistRepository: Repository<Blacklist>,
-    ){}
-
-    async createUser(createUserDto: CreateUserDto): Promise<User> {
-        // Check if user already exists (by email or username)
-        const existingUser = await this.userRepository.findOne({
-            where: [
-                { email: createUserDto.email },
-                { username: createUserDto.username }
-            ]
-        });
-        if (existingUser) {
-            throw new RpcException('User already exists');
-        }
-
-        // Hash password
-        const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-
-
-        // Generate refresh token
-        const refreshToken = generateRefreshToken();
-
-        // Create user entity
-        const user = this.userRepository.create({
-            ...createUserDto,
-            password: hashedPassword,
-            refreshToken,
-        });
-        return this.userRepository.save(user);
+  async createUser(createUserDto: CreateUserDto): Promise<Omit<User, 'password'>> {
+    // Check if user already exists (by email or username)
+    const existingUser = await this.userRepository.findOne({
+      where: [{ email: createUserDto.email }, { username: createUserDto.username }],
+    });
+    if (existingUser) {
+      throw new RpcException('User already exists');
     }
 
-    async deleteUser(targetUserId: string, requesterId: string, token?: string): Promise<User> {
-        if (targetUserId !== requesterId) {
-            throw new RpcException('Forbidden: You can only delete your own account');
-        }
-        const user = await this.userRepository.findOne({ where: { id: targetUserId } });
-        if (!user) {
-            throw new RpcException('User not found');
-        }
+    // Hash password
+    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
 
-        // Blacklist the current token to immediately invalidate it
-        if (token) {
-            await this.blacklistRepository.save({ token });
-        }
+    // Generate refresh token
+    const refreshToken = generateRefreshToken();
 
-        return this.userRepository.remove(user);
+    // Create user entity
+    const user = this.userRepository.create({
+      ...createUserDto,
+      password: hashedPassword,
+      refreshToken,
+    });
+    return this.userRepository.save(user);
+  }
+
+  async deleteUser(
+    targetUserId: string,
+    requesterId: string,
+    token?: string,
+  ): Promise<Omit<User, 'password'>> {
+    if (targetUserId !== requesterId) {
+      throw new RpcException('Forbidden: You can only delete your own account');
+    }
+    const user = await this.userRepository.findOne({ where: { id: targetUserId } });
+    if (!user) {
+      throw new RpcException('User not found');
     }
 
-    async updateUser(targetUserId: string, requesterId: string, updateUserDto: UpdateUserDto): Promise<User> {
-        if (targetUserId !== requesterId) {
-            throw new RpcException('Forbidden: You can only update your own account');
-        }
-        const user = await this.userRepository.preload({
-            id: targetUserId,
-            ...updateUserDto
-        });
-        if (!user) {
-            throw new RpcException('User not found');
-        }
-        return this.userRepository.save(user);
+    // Blacklist the current token to immediately invalidate it
+    if (token) {
+      await this.blacklistRepository.save({ token });
     }
 
-    async getUsers(): Promise<Omit<User, 'password'>[]> {
-        const users = await this.userRepository.find();
-        if (!users) {
-            throw new RpcException('No users found');
-        }
-        // Exclude password from each user
-        return users.map(({ password, ...user }) => user);
+    return this.userRepository.remove(user);
+  }
+
+  async deleteUserByAdmin(
+    targetUserId: string,
+    requesterId: string,
+    token?: string,
+  ): Promise<Omit<User, 'password'>> {
+    // Verify that the requester is an admin
+    const requester = await this.userRepository.findOne({ where: { id: requesterId } });
+    if (!requester) {
+      throw new RpcException('Requester not found');
     }
 
-    async getUserById(id: string) : Promise<Omit<User, 'password'>>{
-        const user = await this.userRepository.findOne({where: {id}});
-        if (!user) {
-            throw new RpcException('User Not Found');
-        }
-        // Exclude password
-        const { password, ...userWithoutPassword } = user;
-        return userWithoutPassword;
+    if (requester.role !== 'ADMIN') {
+      throw new RpcException('Forbidden: Only admins can delete other users');
     }
+
+    // Find the target user
+    const user = await this.userRepository.findOne({ where: { id: targetUserId } });
+    if (!user) {
+      throw new RpcException('User not found');
+    }
+
+    // Remove the user
+    return this.userRepository.remove(user);
+  }
+
+  async updateUser(
+    targetUserId: string,
+    requesterId: string,
+    updateUserDto: UpdateUserDto,
+  ): Promise<Omit<User, 'password'>> {
+    if (targetUserId !== requesterId) {
+      throw new RpcException('Forbidden: You can only update your own account');
+    }
+
+    // Separate role from other fields to handle type properly
+    const { role, ...otherFields } = updateUserDto;
+
+    const user = await this.userRepository.preload({
+      id: targetUserId,
+      ...otherFields,
+      ...(role && { role: role as any }),
+    });
+    if (!user) {
+      throw new RpcException('User not found');
+    }
+    return this.userRepository.save(user);
+  }
+
+  async getUsers(): Promise<Omit<User, 'password'>[]> {
+    const users = await this.userRepository.find();
+    if (!users) {
+      throw new RpcException('No users found');
+    }
+    // Exclude password from each user
+    return users.map(({ password, ...user }) => user);
+  }
+
+  async getUserById(id: string): Promise<Omit<User, 'password'>> {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new RpcException('User Not Found');
+    }
+    // Exclude password
+    const { password, ...userWithoutPassword } = user;
+    return userWithoutPassword;
+  }
 }
 function generateRefreshToken(): string {
   return randomBytes(32).toString('hex');
-
-
 }
-

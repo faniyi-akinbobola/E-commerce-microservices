@@ -1,13 +1,23 @@
-import { Injectable, Inject, OnModuleInit, Logger, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  OnModuleInit,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { OrderItem } from './entities/order-item.entity';
 import { Order, OrderStatus } from './entities/order-entity';
 import { Repository, DataSource } from 'typeorm';
-import { CreateOrderDto, UpdateOrderStatusDto, CancelOrderDto, AddPaymentRecordDto, CircuitBreakerService } from '@apps/common';
+import {
+  CreateOrderDto,
+  UpdateOrderStatusDto,
+  CancelOrderDto,
+  CircuitBreakerService,
+} from '@apps/common';
 import { RpcException, ClientProxy } from '@nestjs/microservices';
 import { lastValueFrom, timeout } from 'rxjs';
 import { IdempotencyService } from '@apps/common';
-
 
 @Injectable()
 export class OrderService implements OnModuleInit {
@@ -18,6 +28,7 @@ export class OrderService implements OnModuleInit {
   private getUserByIdCircuit;
   private getProductCircuit;
   private getCartCircuit;
+  private clearCartCircuit;
   private getNotificationCircuit;
   private getPaymentCircuit;
 
@@ -32,7 +43,7 @@ export class OrderService implements OnModuleInit {
     private readonly circuitBreakerService: CircuitBreakerService,
     private readonly idempotencyService: IdempotencyService,
     private readonly dataSource: DataSource, // For transactions and row locking
-  ){}
+  ) {}
 
   onModuleInit() {
     this.initializeCircuitBreakers();
@@ -43,10 +54,7 @@ export class OrderService implements OnModuleInit {
     this.getUserAddressCircuit = this.circuitBreakerService.createCircuitBreaker(
       async (data: any) => {
         return await lastValueFrom(
-          this.authClient.send(
-            { cmd: 'get_user_address_by_id' },
-            data
-          ).pipe(timeout(10000))
+          this.authClient.send({ cmd: 'get_user_address_by_id' }, data).pipe(timeout(10000)),
         );
       },
       {
@@ -54,18 +62,20 @@ export class OrderService implements OnModuleInit {
         errorThresholdPercentage: 50,
         resetTimeout: 30000,
         name: 'order_get_user_address',
-      }
+      },
     );
 
     this.getUserAddressCircuit.fallback(() => {
-      throw new RpcException('Unable to retrieve shipping address. Auth service is temporarily unavailable.');
+      throw new RpcException(
+        'Unable to retrieve shipping address. Auth service is temporarily unavailable.',
+      );
     });
 
     // Circuit breaker for Auth Service - Get User Details
     this.getUserByIdCircuit = this.circuitBreakerService.createCircuitBreaker(
       async (data: any) => {
         return await lastValueFrom(
-          this.authClient.send({ cmd: 'get_user_by_id' }, data).pipe(timeout(5000))
+          this.authClient.send({ cmd: 'get_user_by_id' }, data).pipe(timeout(5000)),
         );
       },
       {
@@ -73,18 +83,20 @@ export class OrderService implements OnModuleInit {
         errorThresholdPercentage: 50,
         resetTimeout: 30000,
         name: 'order_get_user_by_id',
-      }
+      },
     );
 
     this.getUserByIdCircuit.fallback(() => {
-      throw new RpcException('Unable to retrieve user details. Auth service is temporarily unavailable.');
+      throw new RpcException(
+        'Unable to retrieve user details. Auth service is temporarily unavailable.',
+      );
     });
 
     // Circuit breaker for Product Service - Get Product Details
     this.getProductCircuit = this.circuitBreakerService.createCircuitBreaker(
       async (data: any) => {
         return await lastValueFrom(
-          this.productClient.send({ cmd: 'get_product_by_id' }, data).pipe(timeout(5000))
+          this.productClient.send({ cmd: 'get_product_by_id' }, data).pipe(timeout(5000)),
         );
       },
       {
@@ -92,17 +104,19 @@ export class OrderService implements OnModuleInit {
         errorThresholdPercentage: 50,
         resetTimeout: 30000,
         name: 'order_get_product',
-      }
+      },
     );
 
     this.getProductCircuit.fallback(() => {
-      throw new RpcException('Unable to retrieve product details. Product service is temporarily unavailable.');
+      throw new RpcException(
+        'Unable to retrieve product details. Product service is temporarily unavailable.',
+      );
     });
 
     this.getCartCircuit = this.circuitBreakerService.createCircuitBreaker(
       async (data: any) => {
         return await lastValueFrom(
-          this.cartClient.send({ cmd: 'get_cart' }, data).pipe(timeout(10000))
+          this.cartClient.send({ cmd: 'get_cart' }, data).pipe(timeout(10000)),
         );
       },
       {
@@ -110,33 +124,60 @@ export class OrderService implements OnModuleInit {
         errorThresholdPercentage: 50,
         resetTimeout: 30000,
         name: 'order_get_cart',
-      }
+      },
     );
-    
+
     this.getCartCircuit.fallback(() => {
-      throw new RpcException('Unable to retrieve cart details. Cart service is temporarily unavailable.');
+      throw new RpcException(
+        'Unable to retrieve cart details. Cart service is temporarily unavailable.',
+      );
+    });
+
+    // Circuit breaker for Cart Service - Clear Cart
+    this.clearCartCircuit = this.circuitBreakerService.createCircuitBreaker(
+      async (data: any) => {
+        return await lastValueFrom(
+          this.cartClient.send({ cmd: 'clear_cart' }, data).pipe(timeout(5000)),
+        );
+      },
+      {
+        timeout: 5000,
+        errorThresholdPercentage: 50,
+        resetTimeout: 30000,
+        name: 'order_clear_cart',
+      },
+    );
+
+    this.clearCartCircuit.fallback(() => {
+      // Don't throw error - clearing cart is not critical to order success
+      this.logger.warn('Unable to clear cart. Cart service is temporarily unavailable.');
+      return { success: false, message: 'Cart service unavailable' };
     });
 
     this.getNotificationCircuit = this.circuitBreakerService.createCircuitBreaker(
-      async (data: any)=>{
-        return await lastValueFrom(this.notificationClient.emit({cmd:"order_created"}, {data}))
+      async (data: any) => {
+        return await lastValueFrom(
+          this.notificationClient.emit({ cmd: 'order_created' }, { data }),
+        );
       },
       {
         timeout: 10000,
         errorThresholdPercentage: 50,
         resetTimeout: 3000,
-        name: "order_created"
-      }
+        name: 'order_created',
+      },
     );
 
-    this.getNotificationCircuit.fallback(()=>{
-      throw new ServiceUnavailableException(`Unable to send order notifications. Notifications service is temporarily unavailable.`)
+    this.getNotificationCircuit.fallback(() => {
+      throw new ServiceUnavailableException(
+        `Unable to send order notifications. Notifications service is temporarily unavailable.`,
+      );
     });
 
     this.getPaymentCircuit = this.circuitBreakerService.createCircuitBreaker(
       async (data: any) => {
         return await lastValueFrom(
-          this.paymentClient.send({ cmd: 'create_charge' }, data).pipe(timeout(15000))
+          this.paymentClient.send({ cmd: 'create_charge' }, data).pipe(timeout(15000)),
         );
       },
       {
@@ -144,18 +185,17 @@ export class OrderService implements OnModuleInit {
         errorThresholdPercentage: 50,
         resetTimeout: 30000,
         name: 'order_create_payment',
-      }
+      },
     );
 
     this.getPaymentCircuit.fallback(() => {
-      throw new RpcException('Unable to process payment. Payment service is temporarily unavailable.');
+      throw new RpcException(
+        'Unable to process payment. Payment service is temporarily unavailable.',
+      );
     });
-
-
 
     this.logger.log('All order service circuit breakers initialized');
   }
-
 
   async updateOrderStatus(updateOrderStatusDto: UpdateOrderStatusDto, idempotencyKey: string) {
     const queryRunner = this.dataSource.createQueryRunner();
@@ -167,7 +207,7 @@ export class OrderService implements OnModuleInit {
         idempotencyKey,
         'order-service',
         '/order/update',
-        updateOrderStatusDto
+        updateOrderStatusDto,
       );
 
       if (idempotencyCheck.exists && idempotencyCheck.status === 'completed') {
@@ -183,7 +223,7 @@ export class OrderService implements OnModuleInit {
       // Lock the order row to prevent concurrent updates
       const order = await queryRunner.manager.findOne(Order, {
         where: { id: updateOrderStatusDto.orderId },
-        lock: { mode: 'pessimistic_write' }
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!order) {
@@ -202,14 +242,13 @@ export class OrderService implements OnModuleInit {
         'order-service',
         '/order/update',
         updateOrderStatusDto,
-        updatedOrderStatus
+        updatedOrderStatus,
       );
 
       await queryRunner.commitTransaction();
       await queryRunner.release();
 
       return updatedOrderStatus;
-
     } catch (error) {
       await queryRunner.rollbackTransaction();
       await queryRunner.release();
@@ -218,7 +257,7 @@ export class OrderService implements OnModuleInit {
         idempotencyKey,
         'order-service',
         '/order/update',
-        error.message || 'Failed to update order status'
+        error.message || 'Failed to update order status',
       );
 
       throw error;
@@ -235,7 +274,7 @@ export class OrderService implements OnModuleInit {
         idempotencyKey,
         'order-service',
         '/order/cancel',
-        cancelOrderDto
+        cancelOrderDto,
       );
 
       if (check.exists && check.status === 'completed') {
@@ -251,8 +290,7 @@ export class OrderService implements OnModuleInit {
       // Lock the order row to prevent concurrent cancellations
       const order = await queryRunner.manager.findOne(Order, {
         where: { id: cancelOrderDto.orderId, userId },
-        relations: ['items'],
-        lock: { mode: 'pessimistic_write' }
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!order) {
@@ -284,7 +322,6 @@ export class OrderService implements OnModuleInit {
       await queryRunner.release();
 
       return savedOrder;
-
     } catch (error) {
       await queryRunner.rollbackTransaction();
       await queryRunner.release();
@@ -330,10 +367,8 @@ export class OrderService implements OnModuleInit {
 
   async createOrder(userId: string, createOrderDto: CreateOrderDto, idempotencyKey: string) {
     try {
-
-      
       console.log('[OrderService] Creating order for user:', userId, 'DTO:', createOrderDto);
-      
+
       // 1. CHECK IDEMPOTENCY - Do this FIRST before any operations
       const idempotencyCheck = await this.idempotencyService.checkIdempotency(
         idempotencyKey,
@@ -344,7 +379,10 @@ export class OrderService implements OnModuleInit {
 
       // If request is already completed, return cached result
       if (idempotencyCheck.exists && idempotencyCheck.status === 'completed') {
-        console.log('[OrderService] Returning cached order result for idempotency key:', idempotencyKey);
+        console.log(
+          '[OrderService] Returning cached order result for idempotency key:',
+          idempotencyKey,
+        );
         return idempotencyCheck.data;
       }
 
@@ -352,21 +390,25 @@ export class OrderService implements OnModuleInit {
       if (idempotencyCheck.exists && idempotencyCheck.status === 'pending') {
         throw new RpcException('Request is already being processed. Please wait.');
       }
-      
+
       // 2. Request the user's shipping address from Auth Service
-      console.log('[OrderService] Calling auth service to get address with params:', { id: createOrderDto.shippingAddressId, userId });      let address;
+      console.log('[OrderService] Calling auth service to get address with params:', {
+        id: createOrderDto.shippingAddressId,
+        userId,
+      });
+      let address;
       try {
-        address = await this.getUserAddressCircuit.fire({ 
-          id: createOrderDto.shippingAddressId, 
-          userId 
+        address = await this.getUserAddressCircuit.fire({
+          id: createOrderDto.shippingAddressId,
+          userId,
         });
-        
+
         console.log('[OrderService] Address retrieved:', JSON.stringify(address));
 
         if (!address) {
           throw new RpcException('Shipping address not found for user');
         }
-        
+
         // If userId is undefined, use the user ID from the address
         if (!userId && address.user && address.user.id) {
           userId = address.user.id;
@@ -376,15 +418,15 @@ export class OrderService implements OnModuleInit {
         console.error('[OrderService] Auth service call error:', err.message, err.stack);
         throw new RpcException(`Failed to get address: ${err.message}`);
       }
-      
+
       // 1. Get user details for email notification
       console.log('[OrderService] Fetching user data for notifications');
       const user = await this.getUserByIdCircuit.fire({ id: userId });
-      
+
       if (!user) {
         throw new RpcException('User not found');
       }
-      
+
       console.log('[OrderService] User retrieved:', user.email, user.username);
 
       // 2. Build shippingAddress snapshot
@@ -398,16 +440,23 @@ export class OrderService implements OnModuleInit {
         phoneNumber: address.phone,
       };
 
-      // 3. Request cart items from Cart Service
-      const cart = await this.getCartCircuit.fire({ userId });
+      // 3. Get items from DTO if provided, otherwise fetch from cart
+      let cartItems;
 
-      console.log('[OrderService] Cart retrieved:', JSON.stringify(cart));
+      if (createOrderDto.items && createOrderDto.items.length > 0) {
+        console.log('[OrderService] Using items from DTO:', createOrderDto.items);
+        cartItems = createOrderDto.items;
+      } else {
+        console.log('[OrderService] No items in DTO, fetching from cart');
+        const cart = await this.getCartCircuit.fire({ userId });
+        console.log('[OrderService] Cart retrieved:', JSON.stringify(cart));
 
-      if (!cart || !cart.items || cart.items.length === 0) {
-        throw new RpcException('Cart is empty');
+        if (!cart || !cart.items || cart.items.length === 0) {
+          throw new RpcException('Cart is empty');
+        }
+
+        cartItems = cart.items;
       }
-
-      const cartItems = cart.items;
 
       // 4. For each cart item, fetch product details and build order items
       const orderItems: OrderItem[] = [];
@@ -415,7 +464,7 @@ export class OrderService implements OnModuleInit {
 
       for (const item of cartItems) {
         console.log('[OrderService] Fetching product:', item.productId);
-        
+
         const product = await this.getProductCircuit.fire({ id: item.productId });
 
         console.log('[OrderService] Product retrieved:', JSON.stringify(product));
@@ -444,12 +493,12 @@ export class OrderService implements OnModuleInit {
 
       console.log('[OrderService] Totals - subtotal:', subtotal, 'tax:', tax, 'total:', totalPrice);
 
-      // process payment 
+      // process payment
       let paymentResult;
 
       try {
         const amountInCents = Math.round(totalPrice * 100);
-        
+
         paymentResult = await this.getPaymentCircuit.fire({
           userId,
           amount: amountInCents,
@@ -459,10 +508,8 @@ export class OrderService implements OnModuleInit {
           metadata: {
             userId,
             itemCount: cartItems.length,
-          }
+          },
         });
-      
-        
       } catch (error) {
         this.logger.error(`Payment service failed: ${error.message}`);
         throw new RpcException({
@@ -471,11 +518,10 @@ export class OrderService implements OnModuleInit {
         });
       }
 
-
       // try {
       //   // Convert amount to cents/kobo (smallest currency unit) as integer
       //   const amountInCents = Math.round(totalPrice * 100);
-        
+
       //   paymentResult = await lastValueFrom(
       //     this.paymentClient.send(
       //       { cmd: 'create_charge' },
@@ -492,9 +538,9 @@ export class OrderService implements OnModuleInit {
       //       }
       //     ).pipe(timeout(15000)) // 15 second timeout for payment
       //   );
-        
+
       //   console.log('[OrderService] Payment successful:', JSON.stringify(paymentResult));
-        
+
       // } catch (paymentError) {
       //   console.error('[OrderService] Payment failed:', paymentError.message);
       //   throw new RpcException({
@@ -502,7 +548,6 @@ export class OrderService implements OnModuleInit {
       //     error: paymentError.message,
       //   });
       // }
-
 
       // 6. Create Order with status = paid
       const order = this.orderRepository.create({
@@ -529,28 +574,41 @@ export class OrderService implements OnModuleInit {
 
       console.log('[OrderService] Order items saved, count:', orderItems.length);
 
+      // Clear the user's cart after successful order placement
+      try {
+        console.log('[OrderService] Clearing cart for user:', userId);
+        await this.clearCartCircuit.fire({ userId });
+        console.log('[OrderService] Cart cleared successfully');
+      } catch (error) {
+        // Log but don't fail the order if cart clearing fails
+        this.logger.warn(`Failed to clear cart for user ${userId}: ${error.message}`);
+      }
+
       // Emit notification AFTER order is saved with full item details
       const notificationPayload = {
         email: user.email,
         name: user.username || 'Customer',
         orderId: savedOrder.id,
         total: totalPrice,
-        items: orderItems.map(item => ({
+        items: orderItems.map((item) => ({
           name: item.name,
           price: item.price,
           quantity: item.quantity,
         })),
       };
-      
-      console.log('[OrderService] Emitting notification with payload:', JSON.stringify(notificationPayload));
+
+      console.log(
+        '[OrderService] Emitting notification with payload:',
+        JSON.stringify(notificationPayload),
+      );
       // this.notificationClient.emit('order_created', notificationPayload);
       try {
         this.getNotificationCircuit.fire(notificationPayload);
       } catch (error) {
-        this.logger.error(`Notification service failed: ${error}`)
+        this.logger.error(`Notification service failed: ${error}`);
         throw error;
       }
-      
+
       console.log('[OrderService] Order creation notification emitted');
 
       // Return the order with items
@@ -572,7 +630,7 @@ export class OrderService implements OnModuleInit {
       return finalOrder;
     } catch (error) {
       console.error('[OrderService] ERROR creating order:', error.message, error.stack);
-      
+
       // 3. MARK FAILED - Allow retry for failed requests
       await this.idempotencyService.markFailed(
         idempotencyKey,
@@ -587,66 +645,4 @@ export class OrderService implements OnModuleInit {
       });
     }
   }
-
-  async addPaymentRecord(dto: AddPaymentRecordDto) {
-    const order = await this.orderRepository.findOne({
-      where: { id: dto.orderId },
-      relations: ['items'],
-    });
-
-    if (!order) {
-      throw new RpcException('Order not found');
-    }
-
-    // Verify amount matches (convert both to numbers for comparison)
-    const orderTotal = typeof order.totalPrice === 'string' 
-      ? parseFloat(order.totalPrice) 
-      : order.totalPrice;
-    const paymentAmount = typeof dto.amount === 'string'
-      ? parseFloat(dto.amount)
-      : dto.amount;
-
-    if (Math.abs(orderTotal - paymentAmount) > 0.01) { // Allow for small rounding differences
-      throw new RpcException(`Payment amount (${paymentAmount}) does not match order total (${orderTotal})`);
-    }
-
-    order.paymentId = dto.transactionId;
-    order.updatedAt = new Date();
-
-    // Only allow PAID or CANCELLED status updates
-    if (dto.paymentStatus === OrderStatus.PAID) {
-      order.status = OrderStatus.PAID;
-      
-      // Emit notification for successful payment
-      this.getNotificationCircuit.fire({
-        orderId: order.id,
-        userId: order.userId,
-        amount: order.totalPrice,
-        transactionId: dto.transactionId,
-      });
-    } else if (dto.paymentStatus === OrderStatus.CANCELLED || dto.paymentStatus === 'FAILED') {
-      order.status = OrderStatus.CANCELLED;
-      
-      // Emit notification for failed payment
-      // this.notificationClient.emit('order_payment_failed', {
-      //   orderId: order.id,
-      //   userId: order.userId,
-      //   amount: order.totalPrice,
-      //   reason: 'Payment failed',
-      // });
-  this.getNotificationCircuit.fire({
-  orderId: order.id,
-  userId: order.userId,
-  amount: order.totalPrice,
-  reason: 'Payment failed'
- })
-    } else {
-      throw new RpcException('Invalid payment status');
-    }
-
-    return this.orderRepository.save(order);
-  }
-
-
 }
-

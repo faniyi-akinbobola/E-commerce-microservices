@@ -4,7 +4,7 @@ import { CartService } from './cart.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RedisModule } from './redis/redis.module';
-import { IdempotencyModule } from '@apps/common';
+import { IdempotencyModule, IdempotencyRequest } from '@apps/common';
 
 @Module({
   imports: [
@@ -21,11 +21,12 @@ import { IdempotencyModule } from '@apps/common';
         username: configService.get('DB_USERNAME', 'postgres'),
         password: configService.get('DB_PASSWORD', 'postgres'),
         database: configService.get('DB_DATABASE', 'cart_db'),
-        entities: [__dirname + '/../**/*.entity{.ts,.js}'],
+        entities: [IdempotencyRequest],
         synchronize: true, // Set to false in production
       }),
       inject: [ConfigService],
     }),
+    TypeOrmModule.forFeature([IdempotencyRequest]),
     RedisModule,
     IdempotencyModule,
   ],

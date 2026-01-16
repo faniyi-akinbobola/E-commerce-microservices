@@ -322,47 +322,4 @@ describe('OrderService', () => {
       );
     });
   });
-
-  describe('addPaymentRecord', () => {
-    it('should add a payment record to an order', async () => {
-      const dto = {
-        orderId: 'order-1',
-        paymentMethod: 'CREDIT_CARD',
-        amount: 100,
-        transactionId: 'txn-123',
-        paymentStatus: OrderStatus.PAID,
-      };
-
-      const mockCircuit = {
-        fire: jest.fn().mockResolvedValue(true),
-      };
-      (service as any).getNotificationCircuit = mockCircuit;
-
-      mockOrderRepository.findOne.mockResolvedValue(mockOrder as any);
-      mockOrderRepository.save.mockResolvedValue({
-        ...mockOrder,
-        paymentId: dto.transactionId,
-        status: OrderStatus.PAID,
-      } as any);
-
-      const result = await service.addPaymentRecord(dto);
-
-      expect(mockOrderRepository.save).toHaveBeenCalled();
-      expect(result).toBeDefined();
-    });
-
-    it('should throw an error if order not found', async () => {
-      const dto = {
-        orderId: 'order-1',
-        paymentMethod: 'CREDIT_CARD',
-        amount: 100,
-        transactionId: 'txn-123',
-        paymentStatus: 'SUCCESS',
-      };
-
-      mockOrderRepository.findOne.mockResolvedValue(null);
-
-      await expect(service.addPaymentRecord(dto)).rejects.toThrow(RpcException);
-    });
-  });
 });

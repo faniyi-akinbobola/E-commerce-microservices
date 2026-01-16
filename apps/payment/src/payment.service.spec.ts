@@ -80,8 +80,13 @@ describe('PaymentService', () => {
 
       expect(mockCircuitBreaker.fire).toHaveBeenCalledWith(
         expect.objectContaining({
-          amount: 1000,
-          currency: 'ngn',
+          paymentData: expect.objectContaining({
+            amount: 1000,
+            currency: 'ngn',
+          }),
+          options: expect.objectContaining({
+            idempotencyKey: 'idempotency-key-123',
+          }),
         }),
       );
       expect(result).toEqual({

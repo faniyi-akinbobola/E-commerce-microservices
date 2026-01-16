@@ -4,36 +4,41 @@ import { IdempotencyService } from '@apps/common';
 
 @Injectable()
 export class CartService {
-
   constructor(
     @Inject('REDIS_CLIENT') private readonly redis,
     private readonly idempotencyService: IdempotencyService,
   ) {}
 
-    private getCartKey(userId: string) {
+  private getCartKey(userId: string) {
     return `cart:${userId}`;
   }
 
-  async updateCartItem(userId: string, productId: string, quantity: number, idempotencyKey: string) {
+  async updateCartItem(
+    userId: string,
+    productId: string,
+    quantity: number,
+    idempotencyKey: string,
+  ) {
     // Step 1: Check idempotency
     const idempotencyCheck = await this.idempotencyService.checkIdempotency(
       idempotencyKey,
       'cart-service',
       'update_cart_item',
-      { userId, productId, quantity }
+      { userId, productId, quantity },
     );
 
     if (idempotencyCheck.exists && idempotencyCheck.status === 'completed') {
+      console.log('[CART DEBUG] Returning cached response:', JSON.stringify(idempotencyCheck.data));
       return idempotencyCheck.data;
     }
 
     if (idempotencyCheck.exists && idempotencyCheck.status === 'pending') {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       const recheckResult = await this.idempotencyService.checkIdempotency(
         idempotencyKey,
         'cart-service',
         'update_cart_item',
-        { userId, productId, quantity }
+        { userId, productId, quantity },
       );
       if (recheckResult.exists && recheckResult.status === 'completed') {
         return recheckResult.data;
@@ -49,7 +54,7 @@ export class CartService {
       const cart = cartRaw ? JSON.parse(cartRaw) : { items: [] };
 
       // Find existing item
-      const itemIndex = cart.items.findIndex(item => item.productId === productId);
+      const itemIndex = cart.items.findIndex((item) => item.productId === productId);
 
       // If quantity is 0 → remove item
       if (quantity === 0) {
@@ -58,7 +63,7 @@ export class CartService {
         }
 
         await this.redis.set(key, JSON.stringify(cart));
-        
+
         // Mark as completed
         await this.idempotencyService.markCompleted(
           idempotencyKey,
@@ -66,9 +71,9 @@ export class CartService {
           'update_cart_item',
           { userId, productId, quantity },
           cart,
-          200
+          200,
         );
-        
+
         return cart;
       }
 
@@ -90,7 +95,7 @@ export class CartService {
         'update_cart_item',
         { userId, productId, quantity },
         cart,
-        200
+        200,
       );
 
       return cart;
@@ -99,117 +104,32 @@ export class CartService {
         idempotencyKey,
         'cart-service',
         'update_cart_item',
-        error.message
+        error.message,
       );
       throw error;
     }
   }
 
   async clearCart(userId: string, idempotencyKey: string) {
-    // Step 1: Check idempotency
-    const idempotencyCheck = await this.idempotencyService.checkIdempotency(
-      idempotencyKey,
-      'cart-service',
-      'clear_cart',
-      { userId }
-    );
-
-    if (idempotencyCheck.exists && idempotencyCheck.status === 'completed') {
-      return idempotencyCheck.data;
-    }
-
-    if (idempotencyCheck.exists && idempotencyCheck.status === 'pending') {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      const recheckResult = await this.idempotencyService.checkIdempotency(
-        idempotencyKey,
-        'cart-service',
-        'clear_cart',
-        { userId }
-      );
-      if (recheckResult.exists && recheckResult.status === 'completed') {
-        return recheckResult.data;
-      }
-    }
-
+    // Skip idempotency check for delete operations - just execute directly
+    // Delete operations are naturally idempotent
     try {
-      // Step 2: Execute business logic
       await this.redis.del(this.getCartKey(userId));
-      const result = { message: 'Cart cleared' };
-
-      // Step 3: Mark as completed
-      await this.idempotencyService.markCompleted(
-        idempotencyKey,
-        'cart-service',
-        'clear_cart',
-        { userId },
-        result,
-        200
-      );
-
-      return result;
+      return { message: 'Cart cleared' };
     } catch (error) {
-      await this.idempotencyService.markFailed(
-        idempotencyKey,
-        'cart-service',
-        'clear_cart',
-        error.message
-      );
       throw error;
     }
   }
 
   async removeFromCart(userId: string, productId: string, idempotencyKey: string) {
-    // Step 1: Check idempotency
-    const idempotencyCheck = await this.idempotencyService.checkIdempotency(
-      idempotencyKey,
-      'cart-service',
-      'remove_from_cart',
-      { userId, productId }
-    );
-
-    if (idempotencyCheck.exists && idempotencyCheck.status === 'completed') {
-      return idempotencyCheck.data;
-    }
-
-    if (idempotencyCheck.exists && idempotencyCheck.status === 'pending') {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      const recheckResult = await this.idempotencyService.checkIdempotency(
-        idempotencyKey,
-        'cart-service',
-        'remove_from_cart',
-        { userId, productId }
-      );
-      if (recheckResult.exists && recheckResult.status === 'completed') {
-        return recheckResult.data;
-      }
-    }
-
+    // Skip idempotency check for delete operations - just execute directly
+    // Delete operations are naturally idempotent
     try {
-      // Step 2: Execute business logic
       const cart = await this.getCart(userId);
-
-      cart.items = cart.items.filter(i => i.productId !== productId);
-
+      cart.items = cart.items.filter((i) => i.productId !== productId);
       await this.redis.set(this.getCartKey(userId), JSON.stringify(cart));
-
-      // Step 3: Mark as completed
-      await this.idempotencyService.markCompleted(
-        idempotencyKey,
-        'cart-service',
-        'remove_from_cart',
-        { userId, productId },
-        cart,
-        200
-      );
-
       return cart;
     } catch (error) {
-      await this.idempotencyService.markFailed(
-        idempotencyKey,
-        'cart-service',
-        'remove_from_cart',
-        error.message
-      );
       throw error;
     }
   }
@@ -225,7 +145,7 @@ export class CartService {
       idempotencyKey,
       'cart-service',
       'add_to_cart',
-      { userId, productId, quantity }
+      { userId, productId, quantity },
     );
 
     // If request already completed, return cached response
@@ -236,12 +156,12 @@ export class CartService {
     // If request is still pending (rare race condition), wait and retry
     if (idempotencyCheck.exists && idempotencyCheck.status === 'pending') {
       // Wait a bit and check again
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       const recheckResult = await this.idempotencyService.checkIdempotency(
         idempotencyKey,
         'cart-service',
         'add_to_cart',
-        { userId, productId, quantity }
+        { userId, productId, quantity },
       );
       if (recheckResult.exists && recheckResult.status === 'completed') {
         return recheckResult.data;
@@ -252,7 +172,7 @@ export class CartService {
       // Step 2: Process the request (add item to cart)
       const cart = await this.getCart(userId);
 
-      const existing = cart.items.find(item => item.productId === productId);
+      const existing = cart.items.find((item) => item.productId === productId);
 
       if (existing) {
         existing.quantity += quantity;
@@ -263,7 +183,8 @@ export class CartService {
       await this.redis.set(
         this.getCartKey(userId),
         JSON.stringify(cart),
-        'EX', 60 * 60 * 24 // cart expires in 24 hours
+        'EX',
+        60 * 60 * 24, // cart expires in 24 hours
       );
 
       // Step 3: Mark operation as completed
@@ -273,7 +194,7 @@ export class CartService {
         'add_to_cart',
         { userId, productId, quantity },
         cart,
-        200
+        200,
       );
 
       return cart;
@@ -283,7 +204,7 @@ export class CartService {
         idempotencyKey,
         'cart-service',
         'add_to_cart',
-        error.message
+        error.message,
       );
       throw error;
     }

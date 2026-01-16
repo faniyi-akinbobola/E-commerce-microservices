@@ -31,7 +31,7 @@ export class InventoryService {
     private readonly idempotencyService: IdempotencyService, // Inject idempotency service
   ) {}
 
-  async addStock(addStockDto: AddStockDto, idempotencyKey: string): Promise<Product> {
+  async addStock(addStockDto: AddStockDto, idempotencyKey: string): Promise<any> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -69,7 +69,7 @@ export class InventoryService {
       // Update inventory
       inventory.quantity += addStockDto.quantity;
       inventory.updatedAt = new Date();
-      await queryRunner.manager.save(Inventory, inventory);
+      const updatedInventory = await queryRunner.manager.save(Inventory, inventory);
 
       // Update product in MongoDB (separate from transaction)
       const product = await this.productRepository.findOne({
@@ -83,21 +83,30 @@ export class InventoryService {
       }
 
       product.stock += addStockDto.quantity;
-      const addedStock = await this.productRepository.save(product);
+      await this.productRepository.save(product);
+
+      const response = {
+        statusCode: 200,
+        timestamp: new Date().toISOString(),
+        data: {
+          ...updatedInventory,
+          productName: product?.name || null,
+        },
+      };
 
       await this.idempotencyService.markCompleted(
         idempotencyKey,
         'inventory-service',
         'inventory/addstock',
         addStockDto,
-        addedStock,
+        response,
         200,
       );
 
       await queryRunner.commitTransaction();
       await queryRunner.release();
 
-      return addedStock;
+      return response;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       await queryRunner.release();
@@ -113,7 +122,7 @@ export class InventoryService {
     }
   }
 
-  async reduceStock(reduceStockDto: ReduceStockDto, idempotencyKey: string): Promise<Product> {
+  async reduceStock(reduceStockDto: ReduceStockDto, idempotencyKey: string): Promise<any> {
     // Create a query runner for transaction management
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
@@ -170,7 +179,7 @@ export class InventoryService {
       inventory.updatedAt = new Date();
 
       // Save the updated inventory within the transaction
-      await queryRunner.manager.save(Inventory, inventory);
+      const updatedInventory = await queryRunner.manager.save(Inventory, inventory);
 
       this.logger.log(
         `Stock reduced for product ${reduceStockDto.productId}: ${reduceStockDto.quantity} units`,
@@ -196,7 +205,16 @@ export class InventoryService {
       }
 
       product.stock -= reduceStockDto.quantity;
-      const updatedProduct = await this.productRepository.save(product);
+      await this.productRepository.save(product);
+
+      const response = {
+        statusCode: 200,
+        timestamp: new Date().toISOString(),
+        data: {
+          ...updatedInventory,
+          productName: product?.name || null,
+        },
+      };
 
       // ===== STEP 6: MARK IDEMPOTENCY AS COMPLETED =====
       await this.idempotencyService.markCompleted(
@@ -204,7 +222,7 @@ export class InventoryService {
         'inventory-service',
         '/inventory/reduce-stock',
         reduceStockDto,
-        updatedProduct,
+        response,
         200,
       );
 
@@ -212,7 +230,7 @@ export class InventoryService {
       await queryRunner.commitTransaction();
       await queryRunner.release();
 
-      return updatedProduct;
+      return response;
     } catch (error) {
       // ===== ROLLBACK ON ERROR (releases the lock) =====
       await queryRunner.rollbackTransaction();
@@ -249,22 +267,52 @@ export class InventoryService {
       const products = await this.productRepository.find({
         where: { _id: { $in: objectIds } } as any,
       });
-      return products || [];
+
+      // Create a map of productId to inventory for quick lookup
+      const inventoryMap = new Map(inventory.map((inv) => [inv.productId, inv]));
+
+      // Merge inventory quantity into product stock
+      const productsWithInventory = products.map((product) => {
+        const inv = inventoryMap.get(product._id.toString());
+        if (inv) {
+          // Update the product's stock with the actual inventory quantity
+          return {
+            ...product,
+            stock: inv.quantity - inv.reserved, // Available stock = quantity - reserved
+          };
+        }
+        return product;
+      });
+
+      return productsWithInventory || [];
     } catch (error) {
       console.error('Error fetching products:', error);
       return [];
     }
   }
 
-  async getInventoryForProduct(id: string): Promise<Inventory> {
+  async getInventoryForProduct(id: string): Promise<any> {
     const inventory = await this.inventoryRepository.findOne({ where: { productId: id } });
     if (!inventory) {
       throw new RpcException('Inventory not found for this product');
     }
-    return inventory;
+
+    // Fetch product name
+    const product = await this.productRepository.findOne({
+      where: { _id: new ObjectId(id) } as any,
+    });
+
+    return {
+      statusCode: 200,
+      timestamp: new Date().toISOString(),
+      data: {
+        ...inventory,
+        productName: product?.name || null,
+      },
+    };
   }
 
-  async releaseStock(releaseStockDto: ReleaseStockDto, idempotencyKey: string): Promise<Inventory> {
+  async releaseStock(releaseStockDto: ReleaseStockDto, idempotencyKey: string): Promise<any> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -310,19 +358,33 @@ export class InventoryService {
 
       const savedInventory = await queryRunner.manager.save(Inventory, inventory);
 
+      // Fetch product name
+      const product = await this.productRepository.findOne({
+        where: { _id: new ObjectId(releaseStockDto.productId) } as any,
+      });
+
+      const response = {
+        statusCode: 200,
+        timestamp: new Date().toISOString(),
+        data: {
+          ...savedInventory,
+          productName: product?.name || null,
+        },
+      };
+
       await this.idempotencyService.markCompleted(
         idempotencyKey,
         'inventory-service',
         'inventory/releaseStock',
         releaseStockDto,
-        savedInventory,
+        response,
         200,
       );
 
       await queryRunner.commitTransaction();
       await queryRunner.release();
 
-      return savedInventory;
+      return response;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       await queryRunner.release();
@@ -338,7 +400,7 @@ export class InventoryService {
     }
   }
 
-  async reserveStock(reserveStockDto: ReserveStockDto, idempotencyKey: string): Promise<Inventory> {
+  async reserveStock(reserveStockDto: ReserveStockDto, idempotencyKey: string): Promise<any> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -384,19 +446,33 @@ export class InventoryService {
 
       const reservedStock = await queryRunner.manager.save(Inventory, inventory);
 
+      // Fetch product name
+      const product = await this.productRepository.findOne({
+        where: { _id: new ObjectId(reserveStockDto.productId) } as any,
+      });
+
+      const response = {
+        statusCode: 200,
+        timestamp: new Date().toISOString(),
+        data: {
+          ...reservedStock,
+          productName: product?.name || null,
+        },
+      };
+
       await this.idempotencyService.markCompleted(
         idempotencyKey,
         'inventory-service',
         'inventory/reserveStock',
         reserveStockDto,
-        reservedStock,
+        response,
         200,
       );
 
       await queryRunner.commitTransaction();
       await queryRunner.release();
 
-      return reservedStock;
+      return response;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       await queryRunner.release();
@@ -416,7 +492,7 @@ export class InventoryService {
     productId: string,
     updateInventoryDto: UpdateInventoryDto,
     idempotencyKey: string,
-  ): Promise<Inventory> {
+  ): Promise<any> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -454,19 +530,33 @@ export class InventoryService {
 
       const updatedInventory = await queryRunner.manager.save(Inventory, inventory);
 
+      // Fetch product name
+      const product = await this.productRepository.findOne({
+        where: { _id: new ObjectId(productId) } as any,
+      });
+
+      const response = {
+        statusCode: 200,
+        timestamp: new Date().toISOString(),
+        data: {
+          ...updatedInventory,
+          productName: product?.name || null,
+        },
+      };
+
       await this.idempotencyService.markCompleted(
         idempotencyKey,
         'inventory-service',
         'inventory/updateInventory',
         updateInventoryDto,
-        updatedInventory,
+        response,
         200,
       );
 
       await queryRunner.commitTransaction();
       await queryRunner.release();
 
-      return updatedInventory;
+      return response;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       await queryRunner.release();
@@ -485,7 +575,7 @@ export class InventoryService {
   async createInventory(
     createInventoryDto: CreateInventoryDto,
     idempotencyKey: string,
-  ): Promise<Inventory> {
+  ): Promise<any> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
@@ -527,19 +617,33 @@ export class InventoryService {
 
       const newInventoryCreated = await queryRunner.manager.save(Inventory, newInventory);
 
+      // Fetch product name
+      const product = await this.productRepository.findOne({
+        where: { _id: new ObjectId(createInventoryDto.productId) } as any,
+      });
+
+      const response = {
+        statusCode: 201,
+        timestamp: new Date().toISOString(),
+        data: {
+          ...newInventoryCreated,
+          productName: product?.name || null,
+        },
+      };
+
       await this.idempotencyService.markCompleted(
         idempotencyKey,
         'inventory-service',
         'inventory/createInventory',
         createInventoryDto,
-        newInventoryCreated,
+        response,
         200,
       );
 
       await queryRunner.commitTransaction();
       await queryRunner.release();
 
-      return newInventoryCreated;
+      return response;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       await queryRunner.release();

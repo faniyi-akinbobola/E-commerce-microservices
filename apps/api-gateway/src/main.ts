@@ -5,6 +5,7 @@ import * as path from 'path';
 import * as cookieParser from 'cookie-parser';
 import { RequestLoggerMiddleware } from '@apps/common';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 // Load .env file manually
 const envPath = path.join(process.cwd(), '.env');
@@ -45,6 +46,43 @@ async function bootstrap() {
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  });
+
+  // Swagger Configuration
+  const config = new DocumentBuilder()
+    .setTitle('E-Commerce Microservices API')
+    .setDescription(
+      'Production-ready e-commerce platform with microservices architecture. Features include user authentication, product catalog, shopping cart, order management, inventory tracking, and payment integration.',
+    )
+    .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter JWT token',
+        in: 'header',
+      },
+      'JWT-auth',
+    )
+    .addServer('http://localhost:3000', 'Development Server')
+    .addTag('Authentication', 'User authentication and authorization endpoints')
+    .addTag('Users', 'User profile management endpoints')
+    .addTag('Addresses', 'User address management endpoints')
+    .addTag('Products', 'Product catalog and management endpoints')
+    .addTag('Inventory', 'Inventory tracking and management endpoints')
+    .addTag('Cart', 'Shopping cart management endpoints')
+    .addTag('Orders', 'Order processing and management endpoints')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+      tagsSorter: 'alpha',
+      operationsSorter: 'alpha',
+    },
   });
 
   const port = process.env.PORT || 3000;

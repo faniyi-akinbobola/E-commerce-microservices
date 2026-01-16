@@ -22,7 +22,9 @@ import { ClientProxy } from '@nestjs/microservices';
 import { JwtBlacklistGuard } from '../guards/jwt-blacklist.guard';
 import { timeout, catchError, throwError, firstValueFrom } from 'rxjs';
 import { IdempotencyInterceptor } from '../interceptors/idempotency.interceptor';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 
+@ApiTags('Authentication')
 @UseInterceptors(IdempotencyInterceptor)
 @Controller({ path: 'auth', version: '1' })
 export class AuthController implements OnModuleInit {
@@ -232,6 +234,25 @@ export class AuthController implements OnModuleInit {
   }
 
   @Post('login')
+  @ApiOperation({
+    summary: 'User login',
+    description:
+      'Authenticate user with email and password. Returns access token and refresh token for authorized requests.',
+  })
+  @ApiBody({ type: LoginDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully authenticated. Returns user data and JWT tokens.',
+    schema: {
+      example: {
+        user: { id: '123', email: 'user@example.com', username: 'johndoe' },
+        accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
+  @ApiResponse({ status: 503, description: 'Service temporarily unavailable' })
   async login(@Body() loginDto: LoginDto) {
     try {
       return await this.loginCircuit.fire(loginDto);
@@ -242,6 +263,26 @@ export class AuthController implements OnModuleInit {
   }
 
   @Post('signup')
+  @ApiOperation({
+    summary: 'User registration',
+    description:
+      'Create a new user account with email, username, and password. Email must be unique.',
+  })
+  @ApiBody({ type: CreateUserDto })
+  @ApiResponse({
+    status: 201,
+    description: 'User successfully created',
+    schema: {
+      example: {
+        id: '123',
+        email: 'user@example.com',
+        username: 'johndoe',
+        createdAt: '2026-01-16T10:00:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid input data or email already exists' })
+  @ApiResponse({ status: 503, description: 'Service temporarily unavailable' })
   async signup(@Body() body: CreateUserDto) {
     try {
       this.logger.log(`Signup request for user: ${body.username}`);
@@ -253,6 +294,24 @@ export class AuthController implements OnModuleInit {
   }
 
   @Post('refreshtoken')
+  @ApiOperation({
+    summary: 'Refresh access token',
+    description:
+      'Generate a new access token using a valid refresh token. Use this when the access token expires.',
+  })
+  @ApiBody({ type: RefreshTokenDto })
+  @ApiResponse({
+    status: 200,
+    description: 'New access token generated',
+    schema: {
+      example: {
+        accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+        refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
+  @ApiResponse({ status: 503, description: 'Service temporarily unavailable' })
   async refreshToken(@Body() body: RefreshTokenDto) {
     try {
       return await this.refreshTokenCircuit.fire(body);
@@ -263,6 +322,23 @@ export class AuthController implements OnModuleInit {
   }
 
   @Post('forgotpassword')
+  @ApiOperation({
+    summary: 'Request password reset',
+    description:
+      'Send a password reset email to the registered email address. Email contains a reset token.',
+  })
+  @ApiBody({ type: ForgotPasswordDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Password reset email sent successfully',
+    schema: {
+      example: {
+        message: 'Password reset email sent successfully',
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Email not found' })
+  @ApiResponse({ status: 503, description: 'Service temporarily unavailable' })
   async forgotPassword(@Body() body: ForgotPasswordDto) {
     try {
       return await this.forgotPasswordCircuit.fire(body);
@@ -273,6 +349,23 @@ export class AuthController implements OnModuleInit {
   }
 
   @Post('resetpassword')
+  @ApiOperation({
+    summary: 'Reset password with token',
+    description:
+      'Reset user password using the token received via email. Token expires after a certain period.',
+  })
+  @ApiBody({ type: ResetPasswordDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Password reset successful',
+    schema: {
+      example: {
+        message: 'Password has been reset successfully',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid or expired reset token' })
+  @ApiResponse({ status: 503, description: 'Service temporarily unavailable' })
   async resetPassword(@Body() body: ResetPasswordDto) {
     try {
       return await this.resetPasswordCircuit.fire(body);
@@ -283,7 +376,24 @@ export class AuthController implements OnModuleInit {
   }
 
   @UseGuards(JwtBlacklistGuard)
+  @ApiBearerAuth('JWT-auth')
   @Post('changepassword')
+  @ApiOperation({
+    summary: 'Change password (authenticated)',
+    description: 'Change password for authenticated user. Requires current password verification.',
+  })
+  @ApiBody({ type: ChangePasswordDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Password changed successfully',
+    schema: {
+      example: {
+        message: 'Password changed successfully',
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid current password or token' })
+  @ApiResponse({ status: 503, description: 'Service temporarily unavailable' })
   async changePassword(@Body() body: ChangePasswordDto, @Request() req) {
     try {
       return await this.changePasswordCircuit.fire({
@@ -297,7 +407,23 @@ export class AuthController implements OnModuleInit {
   }
 
   @UseGuards(JwtBlacklistGuard)
+  @ApiBearerAuth('JWT-auth')
   @Post('signout')
+  @ApiOperation({
+    summary: 'User logout',
+    description: 'Sign out authenticated user and invalidate JWT token by adding it to blacklist.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully signed out',
+    schema: {
+      example: {
+        message: 'Successfully signed out',
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
+  @ApiResponse({ status: 503, description: 'Service temporarily unavailable' })
   async signOut(@Request() req) {
     try {
       const jwtToken = req.headers['authorization']?.replace('Bearer ', '');
@@ -312,7 +438,28 @@ export class AuthController implements OnModuleInit {
   }
 
   @UseGuards(JwtBlacklistGuard)
+  @ApiBearerAuth('JWT-auth')
   @Get('getprofile')
+  @ApiOperation({
+    summary: 'Get user profile',
+    description:
+      'Retrieve authenticated user profile information including email, username, and account details.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User profile retrieved successfully',
+    schema: {
+      example: {
+        id: '123',
+        email: 'user@example.com',
+        username: 'johndoe',
+        createdAt: '2026-01-16T10:00:00.000Z',
+        updatedAt: '2026-01-16T10:00:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
+  @ApiResponse({ status: 503, description: 'Service temporarily unavailable' })
   async getProfile(@Request() req) {
     try {
       return await this.getProfileCircuit.fire({ userId: req.user.id });

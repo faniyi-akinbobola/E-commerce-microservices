@@ -20,7 +20,17 @@ import { OnModuleInit } from '@nestjs/common';
 import { CircuitBreakerService } from '@apps/common';
 import { lastValueFrom, timeout } from 'rxjs';
 import { IdempotencyInterceptor } from '../interceptors/idempotency.interceptor';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+  ApiBody,
+} from '@nestjs/swagger';
 
+@ApiTags('Addresses')
+@ApiBearerAuth('JWT-auth')
 @UseInterceptors(IdempotencyInterceptor)
 @UseGuards(JwtBlacklistGuard)
 @Controller({ path: 'users-address', version: '1' })
@@ -140,6 +150,32 @@ export class UsersAddressController implements OnModuleInit {
 
   @Roles('ADMIN', 'CUSTOMER')
   @Post('createuseraddress')
+  @ApiOperation({
+    summary: 'Create user address',
+    description:
+      "Add a new delivery address to the authenticated user's profile. Required for order checkout.",
+  })
+  @ApiBody({ type: CreateUserAddressDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Address created successfully',
+    schema: {
+      example: {
+        id: 'addr_123',
+        userId: '123',
+        street: '123 Main St',
+        city: 'San Francisco',
+        state: 'CA',
+        zipCode: '94102',
+        country: 'USA',
+        isDefault: true,
+        createdAt: '2026-01-16T10:00:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
+  @ApiResponse({ status: 503, description: 'Service temporarily unavailable' })
   async createUserAddress(@Body() createUserAddressDto: CreateUserAddressDto, @Req() req) {
     // return this.authClient.send({ cmd: 'create_user_address' }, {...createUserAddressDto, userId: req.user.id });
     try {
@@ -155,6 +191,36 @@ export class UsersAddressController implements OnModuleInit {
 
   @Roles('ADMIN', 'CUSTOMER')
   @Get('getuseraddresses')
+  @ApiOperation({
+    summary: 'Get all user addresses',
+    description: 'Retrieve all saved addresses for the authenticated user.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of user addresses',
+    schema: {
+      example: [
+        {
+          id: 'addr_123',
+          street: '123 Main St',
+          city: 'San Francisco',
+          state: 'CA',
+          zipCode: '94102',
+          isDefault: true,
+        },
+        {
+          id: 'addr_124',
+          street: '456 Oak Ave',
+          city: 'Los Angeles',
+          state: 'CA',
+          zipCode: '90001',
+          isDefault: false,
+        },
+      ],
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
+  @ApiResponse({ status: 503, description: 'Service temporarily unavailable' })
   async getUserAddresses(@Req() req) {
     // return this.authClient.send({ cmd: 'get_user_addresses' }, { userId: req.user.id });
     try {
@@ -169,6 +235,31 @@ export class UsersAddressController implements OnModuleInit {
 
   @Roles('ADMIN', 'CUSTOMER')
   @Patch('updateuseraddress/:id')
+  @ApiOperation({
+    summary: 'Update user address',
+    description: 'Update an existing delivery address. Can set as default address.',
+  })
+  @ApiParam({ name: 'id', description: 'Address ID', example: 'addr_123' })
+  @ApiBody({ type: UpdateUserAddressDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Address updated successfully',
+    schema: {
+      example: {
+        id: 'addr_123',
+        street: '123 Main St Apt 5',
+        city: 'San Francisco',
+        state: 'CA',
+        zipCode: '94102',
+        isDefault: true,
+        updatedAt: '2026-01-16T12:00:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid input data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
+  @ApiResponse({ status: 404, description: 'Address not found' })
+  @ApiResponse({ status: 503, description: 'Service temporarily unavailable' })
   async updateUserAddress(
     @Param('id') id: string,
     @Body() updateUserAddressDto: UpdateUserAddressDto,
@@ -192,6 +283,24 @@ export class UsersAddressController implements OnModuleInit {
 
   @Roles('ADMIN', 'CUSTOMER')
   @Delete('deleteuseraddress/:id')
+  @ApiOperation({
+    summary: 'Delete user address',
+    description:
+      "Remove a saved address from the user's profile. Default address cannot be deleted if other addresses exist.",
+  })
+  @ApiParam({ name: 'id', description: 'Address ID to delete', example: 'addr_123' })
+  @ApiResponse({
+    status: 200,
+    description: 'Address deleted successfully',
+    schema: {
+      example: {
+        message: 'Address deleted successfully',
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
+  @ApiResponse({ status: 404, description: 'Address not found' })
+  @ApiResponse({ status: 503, description: 'Service temporarily unavailable' })
   async deleteUserAddress(@Param('id') id: string, @Req() req) {
     // return this.authClient.send(
     //     { cmd: 'delete_user_address' },
@@ -210,6 +319,31 @@ export class UsersAddressController implements OnModuleInit {
 
   @Roles('ADMIN', 'CUSTOMER')
   @Get('getuseraddressbyid/:id')
+  @ApiOperation({
+    summary: 'Get address by ID',
+    description: 'Retrieve detailed information about a specific saved address.',
+  })
+  @ApiParam({ name: 'id', description: 'Address ID', example: 'addr_123' })
+  @ApiResponse({
+    status: 200,
+    description: 'Address details',
+    schema: {
+      example: {
+        id: 'addr_123',
+        userId: '123',
+        street: '123 Main St',
+        city: 'San Francisco',
+        state: 'CA',
+        zipCode: '94102',
+        country: 'USA',
+        isDefault: true,
+        createdAt: '2026-01-16T10:00:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
+  @ApiResponse({ status: 404, description: 'Address not found' })
+  @ApiResponse({ status: 503, description: 'Service temporarily unavailable' })
   async getUserAddressById(@Param('id') id: string, @Req() req) {
     // return this.authClient.send({ cmd: 'get_user_address_by_id' }, { id, userId: req.user.id });
     try {

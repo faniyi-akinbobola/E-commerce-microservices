@@ -15,6 +15,7 @@ This project implements a fully distributed microservices architecture with:
 ## 🚀 Features
 
 ### Authentication & Authorization
+
 - User registration and login with JWT tokens
 - Password reset and change functionality
 - Token refresh mechanism
@@ -22,6 +23,7 @@ This project implements a fully distributed microservices architecture with:
 - User profile management
 
 ### Product Management
+
 - Product CRUD operations
 - Category management
 - Product search and filtering
@@ -29,12 +31,14 @@ This project implements a fully distributed microservices architecture with:
 - Stock availability tracking
 
 ### Shopping Cart
+
 - Add/remove items from cart
 - Update item quantities
 - Automatic cart clearing after order completion
 - Real-time cart synchronization
 
 ### Order Management
+
 - Order creation with payment processing
 - Order status tracking (PENDING → PAID → SHIPPED → DELIVERED)
 - Order cancellation
@@ -42,12 +46,14 @@ This project implements a fully distributed microservices architecture with:
 - Email notifications
 
 ### Inventory Management
+
 - Real-time stock tracking
 - Stock reservation system
 - Stock release on order cancellation
 - Low stock alerts
 
 ### Payment Processing
+
 - Stripe integration
 - Secure payment handling
 - Payment verification
@@ -63,42 +69,45 @@ This project implements a fully distributed microservices architecture with:
 ## 🛠️ Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone https://github.com/faniyi-akinbobola/E-commerce-microservices.git
    cd E-commerce-microservices
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Set up environment variables**
-   
+
    Create `.env` files in the root directory:
+
    ```env
    # JWT Configuration
    JWT_SECRET=your_jwt_secret_key_here
    JWT_REFRESH_SECRET=your_refresh_secret_key_here
-   
+
    # Stripe Configuration
    STRIPE_SECRET_KEY=your_stripe_secret_key
    STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
-   
+
    # RabbitMQ Configuration
    RABBITMQ_URL=amqp://rabbitmq:5672
-   
+
    # Redis Configuration
    REDIS_HOST=redis
    REDIS_PORT=6379
-   
+
    # Database URLs
    AUTH_DATABASE_URL=postgresql://postgres:postgres@auth-db:5432/auth_db
    CART_DATABASE_URL=postgresql://postgres:postgres@cart-db:5432/cart_db
    ORDER_DATABASE_URL=postgresql://postgres:postgres@order-db:5432/order_db
    INVENTORY_DATABASE_URL=postgresql://postgres:postgres@inventory-db:5432/inventory_db
    PRODUCT_DATABASE_URL=mongodb://product-db:27017/product_db
-   
+
    # Email Configuration (for notifications)
    SMTP_HOST=smtp.gmail.com
    SMTP_PORT=587
@@ -107,6 +116,7 @@ This project implements a fully distributed microservices architecture with:
    ```
 
 4. **Start the services**
+
    ```bash
    docker-compose up -d
    ```
@@ -121,6 +131,7 @@ This project implements a fully distributed microservices architecture with:
 The API Gateway runs on `http://localhost:3000` and exposes the following routes:
 
 ### Authentication (`/v1/auth`)
+
 - `POST /signup` - Register new user
 - `POST /login` - User login
 - `POST /refreshtoken` - Refresh access token
@@ -131,6 +142,7 @@ The API Gateway runs on `http://localhost:3000` and exposes the following routes
 - `GET /getprofile` - Get user profile
 
 ### Users (`/v1/users`)
+
 - `GET /getusers` - Get all users
 - `GET /getuser/:id` - Get user by ID
 - `PATCH /updateuser` - Update user profile
@@ -138,6 +150,7 @@ The API Gateway runs on `http://localhost:3000` and exposes the following routes
 - `DELETE /deleteuser/:id` - Delete user by ID
 
 ### User Addresses (`/v1/users-address`)
+
 - `POST /createuseraddress` - Create address
 - `GET /getuseraddresses` - Get all user addresses
 - `GET /getuseraddressbyid/:id` - Get address by ID
@@ -145,6 +158,7 @@ The API Gateway runs on `http://localhost:3000` and exposes the following routes
 - `DELETE /deleteuseraddress/:id` - Delete address
 
 ### Products (`/v1/product`)
+
 - `POST /createproduct` - Create product
 - `GET /getproducts` - Get all products
 - `GET /getproduct/:id` - Get product by ID
@@ -155,6 +169,7 @@ The API Gateway runs on `http://localhost:3000` and exposes the following routes
 - `GET /getproductsbycategory/:slug` - Get products by category
 
 ### Categories (`/v1/product`)
+
 - `POST /createcategory` - Create category
 - `GET /getcategories` - Get all categories
 - `GET /getcategory/:id` - Get category by ID
@@ -163,6 +178,7 @@ The API Gateway runs on `http://localhost:3000` and exposes the following routes
 - `DELETE /deletecategory/:id` - Delete category
 
 ### Inventory (`/v1/inventory`)
+
 - `POST /createinventory` - Create inventory record
 - `GET /getinventoryforproduct/:id` - Get inventory for product
 - `GET /getavailableproducts` - Get products with stock
@@ -173,6 +189,7 @@ The API Gateway runs on `http://localhost:3000` and exposes the following routes
 - `POST /releasestock` - Release reserved stock
 
 ### Cart (`/v1/cart`)
+
 - `POST /addtocart` - Add item to cart
 - `GET /getcart` - Get user's cart
 - `PATCH /updatecartitem/:productId` - Update cart item quantity
@@ -180,6 +197,7 @@ The API Gateway runs on `http://localhost:3000` and exposes the following routes
 - `DELETE /clearcart` - Clear entire cart
 
 ### Orders (`/v1/orders`)
+
 - `POST /` - Create new order
 - `GET /` - Get user's orders
 - `GET /all` - Get all orders
@@ -190,21 +208,25 @@ The API Gateway runs on `http://localhost:3000` and exposes the following routes
 ## 🧪 Testing
 
 ### Run Unit Tests
+
 ```bash
 npm test
 ```
 
 ### Run E2E Tests
+
 ```bash
 npm run test:e2e
 ```
 
 ### Run Tests with Coverage
+
 ```bash
 npm run test:cov
 ```
 
 ### Test Results
+
 - ✅ 208 Unit Tests Passing
 - ✅ 28 E2E Tests Passing
 - ✅ All 51 API Routes Working
@@ -212,6 +234,7 @@ npm run test:cov
 ## 🏃 Usage Example
 
 ### 1. Register a User
+
 ```bash
 curl -X POST http://localhost:3000/v1/auth/signup \
   -H "Content-Type: application/json" \
@@ -223,6 +246,7 @@ curl -X POST http://localhost:3000/v1/auth/signup \
 ```
 
 ### 2. Login
+
 ```bash
 curl -X POST http://localhost:3000/v1/auth/login \
   -H "Content-Type: application/json" \
@@ -233,6 +257,7 @@ curl -X POST http://localhost:3000/v1/auth/login \
 ```
 
 ### 3. Add Item to Cart
+
 ```bash
 curl -X POST http://localhost:3000/v1/cart/addtocart \
   -H "Content-Type: application/json" \
@@ -244,6 +269,7 @@ curl -X POST http://localhost:3000/v1/cart/addtocart \
 ```
 
 ### 4. Create Order
+
 ```bash
 curl -X POST http://localhost:3000/v1/orders \
   -H "Content-Type: application/json" \
@@ -265,6 +291,7 @@ curl -X POST http://localhost:3000/v1/orders \
 ## 🔧 Technology Stack
 
 ### Backend
+
 - **NestJS** - Progressive Node.js framework
 - **TypeScript** - Type-safe JavaScript
 - **RabbitMQ** - Message broker for microservices communication
@@ -275,6 +302,7 @@ curl -X POST http://localhost:3000/v1/orders \
 - **Mongoose** - ODM for MongoDB
 
 ### Infrastructure
+
 - **Docker** - Containerization
 - **Docker Compose** - Multi-container orchestration
 - **Opossum** - Circuit breaker pattern implementation
@@ -283,58 +311,68 @@ curl -X POST http://localhost:3000/v1/orders \
 - **CORS** - Cross-origin resource sharing
 
 ### Payment & Notifications
+
 - **Stripe** - Payment processing
 - **Nodemailer** - Email notifications
 
 ### Testing
+
 - **Jest** - Testing framework
 - **Supertest** - HTTP assertions
 
 ## 📊 System Design Patterns
 
 ### Circuit Breaker Pattern
+
 All inter-service communications use circuit breakers to prevent cascading failures:
+
 - Automatic failover
 - Configurable timeout and error thresholds
 - Self-healing with exponential backoff
 
 ### Idempotency
+
 POST operations implement idempotency to prevent duplicate requests:
+
 - Redis-based idempotency key tracking
 - Automatic request deduplication
 - Configurable TTL for idempotency keys
 
 ### Rate Limiting
+
 API Gateway implements rate limiting to prevent abuse:
+
 - Per-endpoint rate limits
 - IP-based throttling
 - Configurable time windows
 
 ### Caching Strategy
+
 Multi-level caching for optimal performance:
+
 - Redis for session data and frequently accessed data
 - In-memory caching for configuration
 - Database query result caching
 
 ## 🐳 Docker Services
 
-| Service | Port | Description |
-|---------|------|-------------|
-| API Gateway | 3000 | Main entry point |
-| Auth Service | 3001 | Authentication & users |
-| Cart Service | 3002 | Shopping cart |
-| Order Service | 3003 | Order management |
-| Product Service | 3004 | Product catalog |
-| Inventory Service | 3005 | Stock management |
-| Payment Service | 3006 | Payment processing |
-| Notifications Service | 3007 | Email notifications |
-| RabbitMQ | 5672, 15672 | Message queue & management |
-| Redis | 6379 | Cache & sessions |
-| PostgreSQL (Auth) | 5432 | Auth database |
-| PostgreSQL (Cart) | 5433 | Cart database |
-| PostgreSQL (Order) | 5434 | Order database |
-| PostgreSQL (Inventory) | 5435 | Inventory database |
-| MongoDB (Product) | 27017 | Product database |
+| Service                | Port        | Description                |
+| ---------------------- | ----------- | -------------------------- |
+| API Gateway            | 3000        | Main entry point           |
+| Auth Service           | 3001        | Authentication & users     |
+| Cart Service           | 3002        | Shopping cart              |
+| Order Service          | 3003        | Order management           |
+| Product Service        | 3004        | Product catalog            |
+| Inventory Service      | 3005        | Stock management           |
+| Payment Service        | 3006        | Payment processing         |
+| Notifications Service  | 3007        | Email notifications        |
+| RabbitMQ               | 5672, 15672 | Message queue & management |
+| Redis                  | 6379        | Cache & sessions           |
+| PostgreSQL (Auth)      | 5432        | Auth database              |
+| PostgreSQL (Cart)      | 5433        | Cart database              |
+| PostgreSQL (Order)     | 5434        | Order database             |
+| PostgreSQL (Inventory) | 5435        | Inventory database         |
+| MongoDB (Product)      | 27017       | Product database           |
 
 ## 🔐 Security Features
 
@@ -375,6 +413,7 @@ This project is licensed under the MIT License.
 ## 👨‍💻 Author
 
 **Akinbobola Faniyi**
+
 - GitHub: [@faniyi-akinbobola](https://github.com/faniyi-akinbobola)
 
 ## 🙏 Acknowledgments

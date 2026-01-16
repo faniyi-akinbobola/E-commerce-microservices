@@ -28,7 +28,16 @@ import {
 import { lastValueFrom, timeout } from 'rxjs';
 import { CircuitBreakerService } from '@apps/common';
 import { IdempotencyInterceptor } from '../interceptors/idempotency.interceptor';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+  ApiBody,
+} from '@nestjs/swagger';
 
+@ApiTags('Inventory')
 @UseGuards(JwtBlacklistGuard)
 @UseInterceptors(IdempotencyInterceptor)
 @Controller({ path: 'inventory', version: '1' })
@@ -222,7 +231,30 @@ export class InventoryController implements OnModuleInit {
   }
 
   @Roles('ADMIN', 'INVENTORY_MANAGER')
+  @ApiBearerAuth('JWT-auth')
   @Post('reducestock')
+  @ApiOperation({
+    summary: 'Reduce stock',
+    description:
+      'Reduce inventory stock for a product. Used when items are sold or damaged. Requires ADMIN or INVENTORY_MANAGER role.',
+  })
+  @ApiBody({ type: ReduceStockDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Stock reduced successfully',
+    schema: {
+      example: {
+        productId: 'prod_123456',
+        previousQuantity: 100,
+        reducedBy: 10,
+        newQuantity: 90,
+        updatedAt: '2026-01-16T10:00:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Insufficient stock or invalid input' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Requires ADMIN or INVENTORY_MANAGER role' })
   async reduceStock(@Req() req, @Body() body: ReduceStockDto) {
     try {
       const idempotencyKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'];
@@ -234,7 +266,29 @@ export class InventoryController implements OnModuleInit {
   }
 
   @Roles('ADMIN', 'INVENTORY_MANAGER')
+  @ApiBearerAuth('JWT-auth')
   @Post('releasestock')
+  @ApiOperation({
+    summary: 'Release reserved stock',
+    description:
+      'Release previously reserved stock back to available inventory. Used when orders are cancelled. Requires ADMIN or INVENTORY_MANAGER role.',
+  })
+  @ApiBody({ type: ReleaseStockDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Stock released successfully',
+    schema: {
+      example: {
+        productId: 'prod_123456',
+        releasedQuantity: 3,
+        newAvailableStock: 93,
+        orderId: 'order_789012',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   async releaseStock(@Req() req, @Body() body: ReleaseStockDto) {
     try {
       const idempotencyKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'];
@@ -246,7 +300,29 @@ export class InventoryController implements OnModuleInit {
   }
 
   @Roles('ADMIN', 'INVENTORY_MANAGER')
+  @ApiBearerAuth('JWT-auth')
   @Post('reservestock')
+  @ApiOperation({
+    summary: 'Reserve stock',
+    description:
+      'Reserve stock for an order. Reduces available quantity without removing from inventory. Requires ADMIN or INVENTORY_MANAGER role.',
+  })
+  @ApiBody({ type: ReserveStockDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Stock reserved successfully',
+    schema: {
+      example: {
+        productId: 'prod_123456',
+        reservedQuantity: 5,
+        remainingAvailable: 85,
+        orderId: 'order_789012',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Insufficient stock' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   async reserveStock(@Req() req, @Body() body: ReserveStockDto) {
     try {
       const idempotencyKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'];
@@ -258,7 +334,30 @@ export class InventoryController implements OnModuleInit {
   }
 
   @Roles('ADMIN', 'INVENTORY_MANAGER')
+  @ApiBearerAuth('JWT-auth')
   @Post('addstock')
+  @ApiOperation({
+    summary: 'Add stock',
+    description:
+      'Add inventory stock for a product. Used when receiving new shipments. Requires ADMIN or INVENTORY_MANAGER role.',
+  })
+  @ApiBody({ type: AddStockDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Stock added successfully',
+    schema: {
+      example: {
+        productId: 'prod_123456',
+        previousQuantity: 85,
+        addedQuantity: 50,
+        newQuantity: 135,
+        updatedAt: '2026-01-16T10:00:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   async addStock(@Req() req, @Body() body: AddStockDto) {
     try {
       const idempotencyKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'];
@@ -271,6 +370,32 @@ export class InventoryController implements OnModuleInit {
 
   @Public()
   @Get('getavailableproducts')
+  @ApiOperation({
+    summary: 'Get available products',
+    description: 'Retrieve all products that have available inventory stock. Public endpoint.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'List of available products',
+    schema: {
+      example: [
+        {
+          productId: 'prod_123456',
+          name: 'MacBook Pro 16"',
+          availableQuantity: 85,
+          totalQuantity: 100,
+          reservedQuantity: 15,
+        },
+        {
+          productId: 'prod_789012',
+          name: 'iPhone 15 Pro',
+          availableQuantity: 150,
+          totalQuantity: 200,
+          reservedQuantity: 50,
+        },
+      ],
+    },
+  })
   async getAvailableProducts() {
     // return this.inventoryClient.send({ cmd: 'get_available_products' }, {});
     try {
@@ -283,6 +408,26 @@ export class InventoryController implements OnModuleInit {
 
   @Public()
   @Get('getinventoryforproduct/:id')
+  @ApiOperation({
+    summary: 'Get inventory for product',
+    description:
+      'Get detailed inventory information for a specific product by ID. Public endpoint.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Product inventory details',
+    schema: {
+      example: {
+        productId: 'prod_123456',
+        totalQuantity: 100,
+        availableQuantity: 85,
+        reservedQuantity: 15,
+        isActive: true,
+        lastUpdated: '2026-01-16T10:00:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Product inventory not found' })
   async getInventoryForProduct(@Param('id') id: string) {
     // return this.inventoryClient.send({ cmd: 'get_inventory_for_product' }, { id });
     try {
@@ -294,7 +439,30 @@ export class InventoryController implements OnModuleInit {
   }
 
   @Roles('ADMIN', 'INVENTORY_MANAGER')
+  @ApiBearerAuth('JWT-auth')
   @Post('createinventory')
+  @ApiOperation({
+    summary: 'Create inventory',
+    description:
+      'Create a new inventory record for a product. Requires ADMIN or INVENTORY_MANAGER role.',
+  })
+  @ApiBody({ type: CreateInventoryDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Inventory created successfully',
+    schema: {
+      example: {
+        id: 'inv_123456',
+        productId: 'prod_789012',
+        quantity: 100,
+        isActive: true,
+        createdAt: '2026-01-16T10:00:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid input or inventory already exists' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
   async createInventory(@Req() req, @Body() body: CreateInventoryDto) {
     try {
       const idempotencyKey = req.headers['idempotency-key'] || req.headers['x-idempotency-key'];
@@ -306,7 +474,30 @@ export class InventoryController implements OnModuleInit {
   }
 
   @Roles('ADMIN', 'INVENTORY_MANAGER')
+  @ApiBearerAuth('JWT-auth')
   @Patch('updateinventory/:productId')
+  @ApiOperation({
+    summary: 'Update inventory',
+    description:
+      'Update inventory details for a product including quantity and active status. Requires ADMIN or INVENTORY_MANAGER role.',
+  })
+  @ApiBody({ type: UpdateInventoryDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Inventory updated successfully',
+    schema: {
+      example: {
+        productId: 'prod_789012',
+        quantity: 150,
+        isActive: true,
+        updatedAt: '2026-01-16T10:00:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden' })
+  @ApiResponse({ status: 404, description: 'Inventory not found' })
   async updateInventory(
     @Req() req,
     @Param('productId') productId: string,
